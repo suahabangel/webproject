@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유체역학 기반 의료 시스템 아키텍처</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.7.0/mermaid.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1976D2;
+            --secondary-color: #388E3C;
+            --implementation-color: #D32F2F;
+            --verification-color: #7B1FA2;
+            --maintenance-color: #F57C00;
+            --fluid-medical-color: #E91E63;
+            --dark-text: #333;
+            --light-text: #fff;
+            --light-bg: #f5f5f5;
+            --card-bg: #fff;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--fluid-medical-color));
+            color: var(--light-text);
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+        }
+        
+        nav {
+            background-color: var(--dark-text);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav ul {
+            display: flex;
+            justify-content: center;
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        nav li {
+            padding: 1rem;
+        }
+        
+        nav a {
+            color: var(--light-text);
+            text-decoration: none;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            transition: background-color 0.3s;
+        }
+        
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+        }
+        
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .phase-card {
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .phase-card.requirements {
+            border-color: var(--primary-color);
+        }
+        
+        .phase-card.design {
+            border-color: var(--secondary-color);
+        }
+        
+        .phase-card.implementation {
+            border-color: var(--implementation-color);
+        }
+        
+        .phase-card.verification {
+            border-color: var(--verification-color);
+        }
+        
+        .phase-card.maintenance {
+            border-color: var(--maintenance-color);
+        }
+        
+        .phase-card.fluid-medical {
+            border-color: var(--fluid-medical-color);
+        }
+        
+        .phase-icon {
+            background-color: #f0f0f0;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .icon-requirements { color: var(--primary-color); }
+        .icon-design { color: var(--secondary-color); }
+        .icon-implementation { color: var(--implementation-color); }
+        .icon-verification { color: var(--verification-color); }
+        .icon-maintenance { color: var(--maintenance-color); }
+        .icon-fluid-medical { color: var(--fluid-medical-color); }
+        
+        .mermaid {
+            overflow: auto;
+            margin: 2rem 0;
+            background-color: var(--card-bg);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .controls {
+            margin: 1rem 0;
+            text-align: center;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+            margin: 0.5rem;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0d5aa7;
+        }
+        
+        footer {
+            background-color: var(--dark-text);
+            color: var(--light-text);
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>유체역학 기반 의료 시스템 아키텍처</h1>
+        <p>나비에-스톡스 방정식, 블록체인, 마이크로서비스를 활용한 의료 시스템</p>
+    </header>
+    
+    <nav>
+        <ul>
+            <li><a href="#overview">개요</a></li>
+            <li><a href="#flowchart">플로우차트</a></li>
+            <li><a href="#phases">개발 단계</a></li>
+            <li><a href="#fluid-medical">유체역학 의료 시스템</a></li>
+            <li><a href="#navier-stokes">나비에-스톡스 시스템</a></li>
+        </ul>
+    </nav>
+    
+    <main>
+        <section id="overview" class="section">
+            <h2>시스템 개요</h2>
+            <div class="card">
+                <p>이 시스템은 유체역학 원리를 의료 분야에 적용하여 약물 전달, 심혈관 질환 예측, 그리고 다양한 의료 응용 프로그램을 개발하는 통합 아키텍처입니다. 주요 기술 스택으로는 나비에-스톡스 방정식, 블록체인, 마이크로서비스, AI 챗봇, SQL 데이터베이스 및 로드 밸런싱이 포함됩니다.</p>
+                <p>이 시스템은 워터폴 모델을 기반으로 개발되며, 요구사항 분석부터 유지보수까지 체계적인 단계를 거쳐 구현됩니다.</p>
+            </div>
+        </section>
+        
+        <section id="flowchart" class="section">
+            <h2>시스템 아키텍처 플로우차트</h2>
+            <div class="controls">
+                <button id="zoomIn"><i class="fas fa-search-plus"></i> 확대</button>
+                <button id="zoomOut"><i class="fas fa-search-minus"></i> 축소</button>
+                <button id="resetZoom"><i class="fas fa-sync-alt"></i> 원래 크기로</button>
+            </div>
+            <div class="mermaid">
+flowchart TD
+    %% Main Waterfall Model Stages
+    Requirements[요구사항 분석] --> Design[설계]
+    Design --> Implementation[구현]
+    Implementation --> Verification[검증]
+    Verification --> Maintenance[유지보수]
+    
+    %% Requirements Phase
+    subgraph RequirementsPhase[요구사항 분석 단계]
+        Client[클라이언트 애플리케이션] --> SecurityReq[보안 요구사항]
+        Client --> ChatbotReq[AI 챗봇 요구사항]
+        Client --> BlockchainReq[블록체인 요구사항]
+        Client --> MicroserviceReq[마이크로서비스 요구사항]
+        Client --> FluidSecurityReq[유체역학 보안 요구사항]
+        Client --> FluidMedicalReq[유체역학 의료 요구사항]
+        Client --> MultiPhysicsReq[다중물리 통합 요구사항]
+        Client --> SQLReq[SQL 데이터베이스 요구사항]
+        Client --> LoadBalancingReq[로드 밸런싱 요구사항]
+        
+        %% Navier-Stokes specific requirements
+        FluidSecurityReq --> NavierStokesReq[나비에-스톡스 방정식 요구사항]
+        NavierStokesReq --> VorticityAnalysisReq[와도 분석 요구사항]
+        NavierStokesReq --> FluidPatternReq[유체 패턴 인식 요구사항]
+        NavierStokesReq --> TurbulenceDetectionReq[난류 감지 요구사항]
+        NavierStokesReq --> AnomalyDetectionReq[이상 패턴 감지 요구사항]
+        
+        %% Expand key medical requirements
+        FluidMedicalReq --> DrugFlowReq[약물 흐름 분석]
+        FluidMedicalReq --> DrugInteractionReq[약물 상호작용 모델링]
+        FluidMedicalReq --> CardiovascularRiskReq[심혈관 질환 위험 예측]
+        FluidMedicalReq --> DrugDeliveryReq[약물 전달 시스템 효율성]
+    end
+    
+    %% Design Phase
+    subgraph DesignPhase[설계 단계]
+        %% Fluid Medical Design
+        subgraph fluidMedicalDesign[유체역학 기반 의료 시스템 설계]
+            DrugDeliverySystemDesign[약물 전달 시스템 설계]
+            CardiovascularDesign[심혈관 시스템 설계]
+            MultiPhysicsDesign[다중물리 통합 설계]
+            
+            %% Key mathematical models
+            DrugDeliverySystemDesign --> EnhancedPoiseuilleLawDesign[확장 포아죄유 법칙 설계]
+            MultiPhysicsDesign --> SystemHamiltonianDesign[시스템 해밀토니안 설계]
+            CardiovascularDesign --> OscillatoryShearDesign[진동 전단 지수 설계]
+        end
+        
+        %% Navier-Stokes Design
+        subgraph navierStokesDesign[나비에-스톡스 시스템 설계]
+            NavierStokesSimDesign[나비에-스톡스 시뮬레이션 설계]
+            VorticityAnalysisDesign[와도 분석 설계]
+            FluidPatternDesign[유체 패턴 인식 설계]
+        end
+    end
+    
+    %% Implementation Phase
+    subgraph ImplementationPhase[구현 단계]
+        %% Fluid Medical Implementation
+        fluidMedicalImplement[유체역학 기반 의료 시스템 구현]
+        fluidMedicalImplement --> DrugDeliverySystemImpl[약물 전달 시스템 구현]
+        fluidMedicalImplement --> CardiovascularSystemImpl[심혈관 시스템 구현]
+        
+        %% Navier-Stokes Implementation
+        navierStokesImplement[나비에-스톡스 시스템 구현]
+        navierStokesImplement --> SimulationServiceImpl[시뮬레이션 서비스 구현]
+        navierStokesImplement --> VorticityAnalysisImpl[와도 분석 서비스 구현]
+    end
+    
+    %% Verification Phase
+    subgraph VerificationPhase[검증 단계]
+        SystemTest[시스템 테스트]
+        SystemTest --> FluidMedicalTest[유체역학 기반 의료 시스템 테스트]
+        SystemTest --> NavierStokesTest[나비에-스톡스 시스템 테스트]
+    end
+    
+    %% Maintenance Phase
+    subgraph MaintenancePhase[유지보수 단계]
+        FluidMedicalMaintenance[유체역학 기반 의료 시스템 유지보수]
+        NavierStokesMaintenance[나비에-스톡스 시스템 유지보수]
+    end
+    
+    %% Styling
+    classDef phaseHeader fill:#5D4037,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef requirements fill:#1976D2,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef design fill:#388E3C,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef implementation fill:#D32F2F,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef verification fill:#7B1FA2,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef maintenance fill:#F57C00,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef fluidmedical fill:#E91E63,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef navierstokes fill:#9C27B0,stroke:#fff,stroke-width:1px,color:#fff;
+    
+    class Requirements,Design,Implementation,Verification,Maintenance phaseHeader;
+    class RequirementsPhase,FluidMedicalReq,DrugFlowReq,DrugInteractionReq,CardiovascularRiskReq,DrugDeliveryReq requirements;
+    class DesignPhase,fluidMedicalDesign,DrugDeliverySystemDesign,CardiovascularDesign,MultiPhysicsDesign,EnhancedPoiseuilleLawDesign,SystemHamiltonianDesign,OscillatoryShearDesign design;
+    class ImplementationPhase,fluidMedicalImplement,DrugDeliverySystemImpl,CardiovascularSystemImpl implementation;
+    class VerificationPhase,FluidMedicalTest verification;
+    class MaintenancePhase,FluidMedicalMaintenance maintenance;
+    class fluidMedicalDesign,DrugDeliverySystemDesign,CardiovascularDesign,MultiPhysicsDesign,EnhancedPoiseuilleLawDesign,SystemHamiltonianDesign,OscillatoryShearDesign fluidmedical;
+    class NavierStokesReq,VorticityAnalysisReq,FluidPatternReq,TurbulenceDetectionReq,AnomalyDetectionReq,navierStokesDesign,NavierStokesSimDesign,VorticityAnalysisDesign,FluidPatternDesign,navierStokesImplement,SimulationServiceImpl,VorticityAnalysisImpl,NavierStokesTest,NavierStokesMaintenance navierstokes;
+            </div>
+        </section>
+        
+        <section id="phases" class="section">
+            <h2>개발 단계</h2>
+            <div class="card-grid">
+                <div class="card phase-card requirements">
+                    <div class="phase-icon">
+                        <i class="fas fa-clipboard-list icon-requirements"></i>
+                    </div>
+                    <h3>요구사항 분석</h3>
+                    <p>시스템의 기본 요구사항을 수집하고 분석하는 단계입니다.</p>
+                    <ul>
+                        <li>클라이언트 애플리케이션 요구사항</li>
+                        <li>보안 요구사항</li>
+                        <li>유체역학 의료 요구사항</li>
+                        <li>블록체인 및 마이크로서비스 요구사항</li>
+                    </ul>
+                </div>
+                
+                <div class="card phase-card design">
+                    <div class="phase-icon">
+                        <i class="fas fa-pencil-ruler icon-design"></i>
+                    </div>
+                    <h3>설계</h3>
+                    <p>수집된 요구사항을 바탕으로 시스템 아키텍처를 설계하는 단계입니다.</p>
+                    <ul>
+                        <li>유체역학 기반 의료 시스템 설계</li>
+                        <li>나비에-스톡스 시스템 설계</li>
+                        <li>SQL 데이터베이스 설계</li>
+                        <li>로드 밸런싱 설계</li>
+                    </ul>
+                </div>
+                
+                <div class="card phase-card implementation">
+                    <div class="phase-icon">
+                        <i class="fas fa-code icon-implementation"></i>
+                    </div>
+                    <h3>구현</h3>
+                    <p>설계를 바탕으로 실제 시스템을 구현하는 단계입니다.</p>
+                    <ul>
+                        <li>유체역학 기반 의료 시스템 구현</li>
+                        <li>나비에-스톡스 시스템 구현</li>
+                        <li>SQL 데이터베이스 구현</li>
+                        <li>로드 밸런싱 구현</li>
+                    </ul>
+                </div>
+                
+                <div class="card phase-card verification">
+                    <div class="phase-icon">
+                        <i class="fas fa-vial icon-verification"></i>
+                    </div>
+                    <h3>검증</h3>
+                    <p>구현된 시스템을 테스트하고 검증하는 단계입니다.</p>
+                    <ul>
+                        <li>시스템 테스트</li>
+                        <li>유체역학 기반 의료 시스템 테스트</li>
+                        <li>나비에-스톡스 시스템 테스트</li>
+                        <li>성능 및 확장성 테스트</li>
+                    </ul>
+                </div>
+                
+                <div class="card phase-card maintenance">
+                    <div class="phase-icon">
+                        <i class="fas fa-wrench icon-maintenance"></i>
+                    </div>
+                    <h3>유지보수</h3>
+                    <p>시스템을 지속적으로 관리하고 개선하는 단계입니다.</p>
+                    <ul>
+                        <li>유체역학 기반 의료 시스템 유지보수</li>
+                        <li>나비에-스톡스 시스템 유지보수</li>
+                        <li>데이터베이스 최적화</li>
+                        <li>성능 모니터링</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section id="fluid-medical" class="section">
+            <h2>유체역학 기반 의료 시스템</h2>
+            <div class="card">
+                <p>유체역학 기반 의료 시스템은 유체의 흐름과 관련된 물리적 원리를 의료 분야에 적용한 시스템입니다. 이 시스템은 약물 전달, 심혈관 질환 예측, 혈류 분석 등 다양한 의료 응용 프로그램을 지원합니다.</p>
+                
+                <h3>주요 구성 요소</h3>
+                <ul>
+                    <li><strong>약물 전달 시스템:</strong> 확장 포아죄유 법칙을 적용하여 약물의 효율적인 전달을 모델링합니다.</li>
+                    <li><strong>심혈관 시스템:</strong> 진동 전단 지수를 활용하여 심혈관 질환의 위험을 예측합니다.</li>
+                    <li><strong>다중물리 통합:</strong> 시스템 해밀토니안을 통해 다양한 물리적 현상을 통합적으로 모델링합니다.</li>
+                </ul>
+            </div>
+            
+            <div class="card-grid">
+                <div class="card phase-card fluid-medical">
+                    <div class="phase-icon">
+                        <i class="fas fa-pills icon-fluid-medical"></i>
+                    </div>
+                    <h3>약물 전달 시스템</h3>
+                    <p>확장 포아죄유 법칙을 적용하여 인체 내 약물의 흐름을 분석하고 최적화합니다.</p>
+                </div>
+                
+                <div class="card phase-card fluid-medical">
+                    <div class="phase-icon">
+                        <i class="fas fa-heartbeat icon-fluid-medical"></i>
+                    </div>
+                    <h3>심혈관 시스템</h3>
+                    <p>진동 전단 지수를 활용하여 혈관 내 혈류의 패턴을 분석하고 심혈관 질환의 위험을 예측합니다.</p>
+                </div>
+                
+                <div class="card phase-card fluid-medical">
+                    <div class="phase-icon">
+                        <i class="fas fa-project-diagram icon-fluid-medical"></i>
+                    </div>
+                    <h3>다중물리 통합</h3>
+                    <p>시스템 해밀토니안을 통해 다양한 물리적 현상을 통합적으로 모델링하여 복잡한 의료 시스템을 시뮬레이션합니다.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="navier-stokes" class="section">
+            <h2>나비에-스톡스 시스템</h2>
+            <div class="card">
+                <p>나비에-스톡스 시스템은 유체의 흐름을 정확하게 모델링하기 위한 나비에-스톡스 방정식을 기반으로 한 시스템입니다. 이 시스템은 유체의 패턴 인식, 와도 분석, 이상 감지 등 다양한 응용 프로그램을 지원합니다.</p>
+                
+                <h3>주요 구성 요소</h3>
+                <ul>
+                    <li><strong>나비에-스톡스 시뮬레이션:</strong> 유체의 흐름을 시뮬레이션하여 정확한 결과를 도출합니다.</li>
+                    <li><strong>와도 분석:</strong> 유체의 와도를 분석하여 중요한 패턴을 감지합니다.</li>
+                    <li><strong>유체 패턴 인식:</strong> 유체의 패턴을 인식하여 이상 현상을 감지합니다.</li>
+                </ul>
+            </div>
+            
+            <div class="card-grid">
+                <div class="card phase-card">
+                    <div class="phase-icon">
+                        <i class="fas fa-wave-square"></i>
+                    </div>
+                    <h3>나비에-스톡스 시뮬레이션</h3>
+                    <p>유체의 흐름을 정확하게 시뮬레이션하여 다양한 조건에서의 결과를 예측합니다.</p>
+                </div>
+                
+                <div class="card phase-card">
+                    <div class="phase-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>와도 분석</h3>
+                    <p>유체의 와도를 분석하여 중요한 패턴을 감지하고 흐름의 특성을 이해합니다.</p>
+                </div>
+                
+                <div class="card phase-card">
+                    <div class="phase-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>유체 패턴 인식</h3>
+                    <p>기계 학습을 활용하여 유체의 패턴을 인식하고 이상 현상을 감지합니다.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 유체역학 기반 의료 시스템 아키텍처. All Rights Reserved.</p>
+    </footer>
+    
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true
+            }
+        });
+
+        // Wait for the diagram to be rendered
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the SVG element after Mermaid has rendered it
+            setTimeout(function() {
+                const svg = document.querySelector('.mermaid svg');
+                if (svg) {
+                    // Set initial scale
+                    let scale = 1;
+                    const scaleStep = 0.1;
+                    const minScale = 0.5;
+                    const maxScale = 2;
+
+                    // Zoom functions
+                    document.getElementById('zoomIn').addEventListener('click', function() {
+                        if (scale < maxScale) {
+                            scale += scaleStep;
+                            updateScale();
+                        }
+                    });
+
+                    document.getElementById('zoomOut').addEventListener('click', function() {
+                        if (scale > minScale) {
+                            scale -= scaleStep;
+                            updateScale();
+                        }
+                    });
+
+                    document.getElementById('resetZoom').addEventListener('click', function() {
+                        scale = 1;
+                        updateScale();
+                    });
+
+                    function updateScale() {
+                        svg.style.transform = `scale(${scale})`;
+                        svg.style.transformOrigin = 'top left';
+                    }
+                }
+            }, 1000); // Give Mermaid time to render
+            
+            // Smooth scrolling for navigation
+            document.querySelectorAll('nav a').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
