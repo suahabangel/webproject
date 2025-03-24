@@ -1,0 +1,693 @@
+# 유체역학 기반 의료 시스템 API 문서
+
+## 기본 정보
+
+- 기본 URL: `http://localhost:3000/api`
+- 모든 요청은 JSON 형식으로 데이터를 전송합니다.
+- 인증이 필요한 엔드포인트는 Authorization 헤더에 JWT 토큰을 포함해야 합니다.
+  ```
+  Authorization: Bearer {token}
+  ```
+
+## 인증 API
+
+### 로그인
+
+```
+POST /auth/login
+```
+
+**요청**
+
+```json
+{
+  "username": "dr.kim",
+  "password": "doctor123"
+}
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "message": "로그인 성공",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 2,
+    "username": "dr.kim",
+    "email": "hyunwoo.kim@example.com",
+    "role": "Doctor"
+  }
+}
+```
+
+### 회원가입
+
+```
+POST /auth/register
+```
+
+**요청**
+
+```json
+{
+  "username": "new.user",
+  "email": "new.user@example.com",
+  "password": "securepassword",
+  "role": "Researcher"
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "message": "사용자가 성공적으로 등록되었습니다",
+  "userId": 6
+}
+```
+
+### 사용자 프로필 조회
+
+```
+GET /auth/profile
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "user": {
+    "user_id": 2,
+    "username": "dr.kim",
+    "email": "hyunwoo.kim@example.com",
+    "role": "Doctor",
+    "created_at": "2023-01-15T08:30:45.000Z",
+    "last_login": "2023-03-24T09:15:22.000Z"
+  }
+}
+```
+
+## 환자 API
+
+### 환자 목록 조회
+
+```
+GET /patients
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "patients": [
+    {
+      "patient_id": 1,
+      "first_name": "동현",
+      "last_name": "이",
+      "birth_date": "1975-03-15",
+      "gender": "M",
+      "blood_type": "A+",
+      "address": "서울시 강남구 삼성동 123-45",
+      "phone": "010-9876-5432",
+      "email": "donghyun.lee@example.com"
+    },
+    // ...
+  ]
+}
+```
+
+### 환자 상세 조회
+
+```
+GET /patients/:id
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "patient": {
+    "patient_id": 1,
+    "first_name": "동현",
+    "last_name": "이",
+    "birth_date": "1975-03-15",
+    "gender": "M",
+    "blood_type": "A+",
+    "address": "서울시 강남구 삼성동 123-45",
+    "phone": "010-9876-5432",
+    "email": "donghyun.lee@example.com",
+    "emergency_contact": "010-1111-2222",
+    "insurance_id": "INS12345",
+    "created_at": "2023-01-10T08:30:45.000Z",
+    "updated_at": "2023-01-10T08:30:45.000Z"
+  },
+  "diagnoses": [
+    {
+      "diagnosis_id": 1,
+      "diagnosis_date": "2023-06-15",
+      "diagnosis_code": "I10",
+      "diagnosis_description": "본태성(원발성) 고혈압",
+      "notes": "혈압이 지속적으로 높게 유지됨. 생활 습관 개선 및 약물 치료 필요.",
+      "doctor_first_name": "현우",
+      "doctor_last_name": "김"
+    }
+  ],
+  "prescriptions": [
+    {
+      "prescription_id": 1,
+      "prescription_date": "2023-06-15",
+      "status": "Active",
+      "notes": "혈압 조절을 위한 약물 처방",
+      "doctor_first_name": "현우",
+      "doctor_last_name": "김"
+    }
+  ]
+}
+```
+
+### 환자 등록
+
+```
+POST /patients
+```
+
+**요청**
+
+```json
+{
+  "first_name": "지훈",
+  "last_name": "강",
+  "birth_date": "1985-07-25",
+  "gender": "M",
+  "blood_type": "B+",
+  "address": "서울시 송파구 잠실동 123-45",
+  "phone": "010-1234-5678",
+  "email": "jihoon.kang@example.com",
+  "emergency_contact": "010-8765-4321",
+  "insurance_id": "INS98765"
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "message": "환자가 성공적으로 등록되었습니다",
+  "patientId": 6
+}
+```
+
+### 환자 정보 수정
+
+```
+PUT /patients/:id
+```
+
+**요청**
+
+```json
+{
+  "first_name": "지훈",
+  "last_name": "강",
+  "birth_date": "1985-07-25",
+  "gender": "M",
+  "blood_type": "B+",
+  "address": "서울시 송파구 잠실동 456-78",
+  "phone": "010-9876-5432",
+  "email": "jihoon.kang@example.com",
+  "emergency_contact": "010-8765-4321",
+  "insurance_id": "INS98765"
+}
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "message": "환자 정보가 성공적으로 수정되었습니다"
+}
+```
+
+## 약물 API
+
+### 약물 목록 조회
+
+```
+GET /drugs
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "drugs": [
+    {
+      "drug_id": 1,
+      "name": "카디오블로커",
+      "generic_name": "메토프롤롤",
+      "manufacturer": "한국제약",
+      "description": "베타 차단제로 고혈압과 협심증 치료에 사용됩니다.",
+      "dosage_form": "정제",
+      "strength": "50mg",
+      "route_of_administration": "경구",
+      "viscosity": 1.2,
+      "density": 1.1
+    },
+    // ...
+  ]
+}
+```
+
+### 약물 상세 조회
+
+```
+GET /drugs/:id
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "drug": {
+    "drug_id": 1,
+    "name": "카디오블로커",
+    "generic_name": "메토프롤롤",
+    "manufacturer": "한국제약",
+    "description": "베타 차단제로 고혈압과 협심증 치료에 사용됩니다.",
+    "dosage_form": "정제",
+    "strength": "50mg",
+    "route_of_administration": "경구",
+    "viscosity": 1.2,
+    "density": 1.1,
+    "created_at": "2023-01-10T08:30:45.000Z",
+    "updated_at": "2023-01-10T08:30:45.000Z"
+  },
+  "interactions": [
+    {
+      "interaction_id": 1,
+      "drug_id_1": 1,
+      "drug_id_2": 5,
+      "interaction_type": "Major",
+      "description": "두 약물을 함께 사용하면 심각한 저혈압이 발생할 수 있습니다.",
+      "interacting_drug_name": "바스큘라인"
+    },
+    // ...
+  ]
+}
+```
+
+### 약물 등록
+
+```
+POST /drugs
+```
+
+**요청**
+
+```json
+{
+  "name": "뉴로펜",
+  "generic_name": "이부프로펜",
+  "manufacturer": "메디싸이언스",
+  "description": "비스테로이드성 항염증제로 통증과 염증을 완화합니다.",
+  "dosage_form": "정제",
+  "strength": "200mg",
+  "route_of_administration": "경구",
+  "viscosity": 1.1,
+  "density": 1.0
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "message": "약물이 성공적으로 등록되었습니다",
+  "drugId": 6
+}
+```
+
+### 약물 상호작용 등록
+
+```
+POST /drugs/interactions
+```
+
+**요청**
+
+```json
+{
+  "drug_id_1": 1,
+  "drug_id_2": 3,
+  "interaction_type": "Moderate",
+  "description": "함께 사용 시 항암제의 혈중 농도가 변할 수 있습니다."
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "message": "약물 상호작용이 성공적으로 등록되었습니다",
+  "interactionId": 6
+}
+```
+
+## 처방전 API
+
+### 처방전 목록 조회
+
+```
+GET /prescriptions
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "prescriptions": [
+    {
+      "prescription_id": 1,
+      "patient_id": 1,
+      "professional_id": 1,
+      "prescription_date": "2023-06-15",
+      "status": "Active",
+      "notes": "혈압 조절을 위한 약물 처방",
+      "blockchain_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "patient_first_name": "동현",
+      "patient_last_name": "이",
+      "doctor_first_name": "현우",
+      "doctor_last_name": "김"
+    },
+    // ...
+  ]
+}
+```
+
+### 처방전 상세 조회
+
+```
+GET /prescriptions/:id
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "prescription": {
+    "prescription_id": 1,
+    "patient_id": 1,
+    "professional_id": 1,
+    "prescription_date": "2023-06-15",
+    "status": "Active",
+    "notes": "혈압 조절을 위한 약물 처방",
+    "blockchain_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+    "created_at": "2023-06-15T09:30:45.000Z",
+    "updated_at": "2023-06-15T09:30:45.000Z",
+    "patient_first_name": "동현",
+    "patient_last_name": "이",
+    "doctor_first_name": "현우",
+    "doctor_last_name": "김"
+  },
+  "details": [
+    {
+      "detail_id": 1,
+      "prescription_id": 1,
+      "drug_id": 1,
+      "dosage": "50mg",
+      "frequency": "1일 1회",
+      "duration": "30일",
+      "instructions": "매일 아침 식후 30분에 복용하세요.",
+      "drug_name": "카디오블로커",
+      "dosage_form": "정제",
+      "strength": "50mg"
+    },
+    {
+      "detail_id": 2,
+      "prescription_id": 1,
+      "drug_id": 5,
+      "dosage": "30mg",
+      "frequency": "1일 1회",
+      "duration": "30일",
+      "instructions": "매일 저녁 식후 30분에 복용하세요.",
+      "drug_name": "바스큘라인",
+      "dosage_form": "서방정",
+      "strength": "30mg"
+    }
+  ]
+}
+```
+
+### 처방전 등록
+
+```
+POST /prescriptions
+```
+
+**요청**
+
+```json
+{
+  "patient_id": 2,
+  "prescription_date": "2023-03-24",
+  "notes": "두통 완화를 위한 약물 처방",
+  "details": [
+    {
+      "drug_id": 2,
+      "dosage": "300mg",
+      "frequency": "1일 2회",
+      "duration": "15일",
+      "instructions": "아침, 저녁 식후에 복용하세요."
+    }
+  ]
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "message": "처방전이 성공적으로 등록되었습니다",
+  "prescriptionId": 6,
+  "blockchainHash": "e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+}
+```
+
+## 시뮬레이션 API
+
+### 약물 전달 시뮬레이션 실행
+
+```
+POST /simulations/drug-delivery
+```
+
+**요청**
+
+```json
+{
+  "patient_id": 1,
+  "drug_id": 1,
+  "target_organ": "심장",
+  "injection_site": "팔뚝 정맥",
+  "flow_rate": 1.5,
+  "simulation_parameters": {
+    "viscosity": 0.8,
+    "grid_resolution": "128x128x128",
+    "time_steps": 1000
+  }
+}
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "message": "약물 전달 시뮬레이션이 성공적으로 수행되었습니다",
+  "simulationId": 4,
+  "delivery_efficiency": 77.5,
+  "reynolds_number": 2.25,
+  "results": {
+    "reynolds_number": 2.25,
+    "effective_viscosity": 0.8,
+    "delivery_efficiency": 77.5,
+    "grid_resolution": "128x128x128",
+    "time_steps": 1000,
+    "boundary_conditions": "No-slip boundary conditions at vessel walls",
+    "initial_conditions": "Zero velocity, constant pressure gradient",
+    "convergence_criteria": 0.000001,
+    "execution_time": 120.5,
+    "vorticity_data": [...],
+    "velocity_field_data": [...],
+    "pressure_field_data": [...],
+    "simulation_data": {
+      "injection_site_details": {...},
+      "target_organ_details": {...},
+      "pathway_details": {...}
+    }
+  }
+}
+```
+
+### 심혈관 시뮬레이션 실행
+
+```
+POST /simulations/cardiovascular
+```
+
+**요청**
+
+```json
+{
+  "patient_id": 1,
+  "blood_viscosity": 3.5,
+  "vessel_diameter": 0.4,
+  "flow_rate": 1.2,
+  "pressure_gradient": 80.0,
+  "simulation_parameters": {
+    "grid_resolution": "256x64x64",
+    "time_steps": 2000
+  }
+}
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "message": "심혈관 시뮬레이션이 성공적으로 수행되었습니다",
+  "simulationId": 4,
+  "oscillatory_shear_index": 0.25,
+  "risk_assessment": "Medium",
+  "results": {
+    "oscillatory_shear_index": 0.25,
+    "risk_assessment": "Medium",
+    "anomaly_detected": false,
+    "grid_resolution": "256x64x64",
+    "time_steps": 2000,
+    "boundary_conditions": "Pulsatile inlet flow, zero pressure outlet",
+    "initial_conditions": "Parabolic velocity profile",
+    "convergence_criteria": 0.0000001,
+    "execution_time": 180.3,
+    "vorticity_data": [...],
+    "velocity_field_data": [...],
+    "pressure_field_data": [...],
+    "simulation_data": {
+      "vessel_properties": {...},
+      "flow_characteristics": {...},
+      "risk_factors": {...}
+    }
+  }
+}
+```
+
+### 시뮬레이션 결과 조회
+
+```
+GET /simulations/results/:type/:id
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "simulationResults": {
+    "simulation_id": 1,
+    "patient_id": 1,
+    "drug_id": 5,
+    "professional_id": 5,
+    "simulation_date": "2023-11-10T09:30:00.000Z",
+    "target_organ": "심장",
+    "injection_site": "팔뚝 정맥",
+    "flow_rate": 1.5,
+    "reynolds_number": 2.25,
+    "effective_viscosity": 0.8,
+    "delivery_efficiency": 77.5,
+    "simulation_data": {...}
+  },
+  "navierStokesData": {
+    "simulation_id": 1,
+    "simulation_type": "Drug Delivery",
+    "reference_id": 1,
+    "simulation_date": "2023-11-10T09:35:00.000Z",
+    "grid_resolution": "128x128x128",
+    "time_steps": 1000,
+    "boundary_conditions": "No-slip boundary conditions at vessel walls",
+    "initial_conditions": "Zero velocity, constant pressure gradient",
+    "convergence_criteria": 0.000001,
+    "execution_time": 120.5,
+    "vorticity_data": [...],
+    "velocity_field_data": [...],
+    "pressure_field_data": [...],
+    "anomaly_detected": false,
+    "anomaly_description": null
+  }
+}
+```
+
+## 대시보드 API
+
+### 대시보드 통계 조회
+
+```
+GET /dashboard/stats
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "patients": 5,
+  "drugs": 5,
+  "prescriptions": 5,
+  "simulations": 6
+}
+```
+
+### 최근 활동 조회
+
+```
+GET /dashboard/recent-activity
+```
+
+**응답 (200 OK)**
+
+```json
+[
+  {
+    "id": 1,
+    "type": "prescription",
+    "description": "처방전 #5가 등록되었습니다.",
+    "icon": "file-prescription",
+    "timestamp": "2023-10-12T09:45:30.000Z"
+  },
+  {
+    "id": 2,
+    "type": "simulation",
+    "description": "심혈관 시뮬레이션 #3이 수행되었습니다.",
+    "icon": "chart-line",
+    "timestamp": "2023-12-15T15:45:00.000Z"
+  },
+  {
+    "id": 3,
+    "type": "patient",
+    "description": "환자 정보가 수정되었습니다: 김미영",
+    "icon": "user-edit",
+    "timestamp": "2023-09-20T11:30:15.000Z"
+  },
+  {
+    "id": 4,
+    "type": "drug",
+    "description": "약물 상호작용이 등록되었습니다: 카디오블로커-뉴로릴리버",
+    "icon": "pills",
+    "timestamp": "2023-08-05T14:20:45.000Z"
+  },
+  {
+    "id": 5,
+    "type": "simulation",
+    "description": "약물 전달 시뮬레이션 #2가 수행되었습니다.",
+    "icon": "syringe",
+    "timestamp": "2023-11-15T14:45:00.000Z"
+  }
+]
+```
