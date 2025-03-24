@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid 다이어그램</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</head>
+<body>
+    <div class="mermaid">
+        flowchart TD
+    Client[클라이언트 애플리케이션] --> WAF[웹 애플리케이션 방화벽]
+    WAF --> CloudLB[클라우드 로드밸런서]
+    CloudLB --> API[API 게이트웨이]
+    
+    %% 프론트엔드 보안 강화 계층
+    subgraph frontendSecurity[프론트엔드 보안 계층]
+        WAF --> CSP[컨텐츠 보안 정책 CSP]
+        WAF --> InputVal[입력값 검증 필터]
+        WAF --> RateLimit[요청 속도 제한]
+        WAF --> AntiCSRF[CSRF 방지 토큰]
+        
+        CSP --> TLS[TLS/HTTPS 강제 적용]
+        InputVal --> TLS
+        RateLimit --> TLS
+        AntiCSRF --> TLS
+        
+        TLS --> SecureCookies[보안 쿠키 관리]
+        TLS --> ClientEnc[클라이언트 암호화]
+        SecureCookies --> MFA[다중 인증 계층]
+        ClientEnc --> MFA
+    end
+    
+    MFA --> API
+    
+    subgraph k8s[Kubernetes 클러스터]
+        subgraph APIGateway[API 게이트웨이 & 로드밸런싱 레이어]
+            API --> LB[내부 로드밸런서]
+            LB --> AuthSvc[인증/인가 서비스]
+            
+            %% 자동 스케일링 그룹
+            AuthSvc --> AuthScaler[인증 Auto Scaler]
+        end
+        
+        %% 데이터 수집 영역
+        LB --> TrafficIngestionLB[트래픽 수집 로드밸런서]
+        LB --> RenderingIngestionLB[렌더링 수집 로드밸런서]
+        
+        TrafficIngestionLB --> TrafficIngestionScaler[트래픽 Auto Scaler]
+        RenderingIngestionLB --> RenderingScaler[렌더링 Auto Scaler]
+        
+        TrafficIngestionScaler --> TrafficIngestion[트래픽 수집 서비스]
+        RenderingScaler --> RenderingIngestion[렌더링 데이터 수집 서비스]
+        
+        TrafficIngestion --> KafkaTraffic[Kafka: 트래픽 데이터]
+        RenderingIngestion --> KafkaRendering[Kafka: 렌더링 데이터]
+        
+        %% 분석 서비스 영역
+        KafkaTraffic --> FluidSvcLB[유체역학 로드밸런서]
+        KafkaRendering --> RenderSvcLB[렌더링 로드밸런서]
+        
+        FluidSvcLB --> FluidSvc[유체역학 분석 서비스]
+        RenderSvcLB --> RenderSvc[렌더링 보안 분석 서비스]
+        
+        FluidSvc --> NavierStokes[나비에-스톡스 계산 서비스]
+        FluidSvc --> VorticitySvc[와도 분석 서비스]
+        FluidSvc --> BoundingSvc[바운딩 서비스]
+        
+        RenderSvc --> PixelSvc[픽셀 분석 서비스]
+        RenderSvc --> StructureSvc[구조 분석 서비스]
+        RenderSvc --> BehaviorSvc[동작 분석 서비스]
+        
+        NavierStokes --> VorticitySvc
+        PixelSvc --> IntegrationSvc[통합 분석 서비스]
+        StructureSvc --> IntegrationSvc
+        BehaviorSvc --> IntegrationSvc
+        VorticitySvc --> IntegrationSvc
+        BoundingSvc --> IntegrationSvc
+        
+        %% 위협 관리 영역
+        IntegrationSvc --> ThreatSvc[위협 평가 서비스]
+        ThreatSvc --> ActionSvc[대응 조치 서비스]
+        ThreatSvc --> AlertSvc[알림 서비스]
+        ThreatSvc --> VisSvc[시각화 서비스]
+        
+        API --> AdminDashboard[관리자 대시보드]
+        VisSvc --> AdminDashboard
+        AlertSvc --> AdminDashboard
+    end
+    
+    %% 클라우드 외부 서비스
+    ThreatSvc --> BlockchainSvc[블록체인 기록 서비스]
+    BlockchainSvc --> Blockchain[하이퍼레저 패브릭 네트워크]
+    
+    IntegrationSvc --> ML[ML 모델 관리 서비스]
+    ML --> ModelRegistry[모델 레지스트리]
+    
+    %% 스토리지 영역과 암호화 계층
+    subgraph storage[스토리지 계층]
+        MongoDB[(MongoDB: 분석 데이터)]
+        TimescaleDB[(TimescaleDB: 시계열 데이터)]
+        Redis[(Redis: 캐시)]
+        
+        subgraph encryption[암호화 계층]
+            EncryptionSvc[암호화 서비스]
+            KeyMgmt[키 관리 서비스]
+            EncryptionSvc <--> KeyMgmt
+        end
+        
+        subgraph sqldb[SQL 데이터베이스]
+            RDS[(암호화된 RDS)]
+            AuroraReplicas[(Aurora 복제본)]
+            RDS <--> AuroraReplicas
+        end
+    end
+    
+    %% 암호화 연결
+    FluidSvc -- 암호화 연결 --> MongoDB
+    FluidSvc -- 암호화 연결 --> TimescaleDB
+    RenderSvc -- 암호화 연결 --> MongoDB
+    IntegrationSvc -- 암호화 연결 --> Redis
+    ThreatSvc -- 암호화 연결 --> MongoDB
+    BoundingSvc -- 암호화 연결 --> RDS
+    TrafficIngestion -- 암호화 연결 --> RDS
+    
+    %% 암호화 서비스 연결
+    RDS <--> EncryptionSvc
+    MongoDB <--> EncryptionSvc
+    TimescaleDB <--> EncryptionSvc
+    
+    %% 클라우드 관리 서비스
+    subgraph cloudservices[클라우드 관리 서비스]
+        Monitoring[모니터링 서비스]
+        Logging[로깅 서비스]
+        IAM[ID 및 권한 관리]
+        SecretsMgmt[시크릿 관리 서비스]
+    end
+    
+    %% 클라우드 서비스 연결
+    k8s -- 모니터링 --> Monitoring
+    k8s -- 로그 수집 --> Logging
+    k8s -- 인증 --> IAM
+    KeyMgmt -- 키 관리 --> SecretsMgmt
+    
+    %% 프론트엔드 특화 보안 기능
+    subgraph frontendSpecial[프론트엔드 특화 보안]
+        ObfuscationLayer[코드 난독화 계층]
+        SRICheck[서브리소스 무결성 검사]
+        BrowserFP[브라우저 지문 보호]
+        DevToolProtect[개발자 도구 보호]
+        SafeIframe[샌드박스 iframe 정책]
+    end
+    
+    Client --> frontendSpecial
+    frontendSpecial --> WAF
+    
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef blockchain fill:#fc9403,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef loadbalancer fill:#6a9c45,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef encryption fill:#d14f4f,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef cloud fill:#7e57c2,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef frontendSec fill:#e64a19,stroke:#fff,stroke-width:1px,color:#fff;
+    
+    class BlockchainSvc,Blockchain blockchain;
+    class k8s k8s;
+    class CloudLB,LB,TrafficIngestionLB,RenderingIngestionLB,FluidSvcLB,RenderSvcLB loadbalancer;
+    class EncryptionSvc,KeyMgmt,RDS,AuroraReplicas encryption;
+    class Monitoring,Logging,IAM,SecretsMgmt,CloudLB cloud;
+    class WAF,CSP,InputVal,RateLimit,AntiCSRF,TLS,SecureCookies,ClientEnc,MFA,ObfuscationLayer,SRICheck,BrowserFP,DevToolProtect,SafeIframe frontendSec;
+    </div>
+</body>
+</html>
