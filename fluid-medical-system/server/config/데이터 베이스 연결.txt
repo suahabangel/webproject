@@ -1,0 +1,36 @@
+// server/config/database.js
+const { CosmosClient } = require('@azure/cosmos');
+const { getSecret } = require('./azure');
+
+async function connectDatabase() {
+  try {
+    // Get database connection string from Azure Key Vault
+    const connectionString = await getSecret('cosmos-connection-string');
+    
+    // Initialize Cosmos DB client
+    const client = new CosmosClient(connectionString);
+    
+    // Get database and container references
+    const database = client.database('fluid-medical-db');
+    const patientsContainer = database.container('patients');
+    const simulationsContainer = database.container('simulations');
+    const drugsContainer = database.container('drugs');
+    
+    console.log('Connected to Azure Cosmos DB');
+    
+    return {
+      client,
+      database,
+      containers: {
+        patients: patientsContainer,
+        simulations: simulationsContainer,
+        drugs: drugsContainer
+      }
+    };
+  } catch (error) {
+    console.error('Database connection error:', error);
+    throw error;
+  }
+}
+
+module.exports = { connectDatabase };

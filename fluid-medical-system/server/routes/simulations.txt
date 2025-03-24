@@ -1,0 +1,70 @@
+const express = require('express');
+const router = express.Router();
+const { validateSimulationParams } = require('../../utils/validation');
+const authMiddleware = require('../middleware/auth');
+const securityMiddleware = require('../middleware/security');
+
+// Get all simulations
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    // Implement database query logic
+    res.status(200).json({ message: 'Simulation data retrieved successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get simulation by ID
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    // Implement database query logic for specific simulation
+    res.status(200).json({ message: 'Simulation data retrieved successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create new simulation
+router.post('/', [authMiddleware, securityMiddleware, validateSimulationParams], async (req, res) => {
+  try {
+    // Implement Navier-Stokes simulation logic
+    // Save results to database
+    res.status(201).json({ message: 'Simulation created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Run fluid dynamics analysis
+router.post('/:id/analyze', authMiddleware, async (req, res) => {
+  try {
+    // Implement vorticity analysis
+    // Implement pattern recognition
+    // Implement anomaly detection
+    res.status(200).json({ message: 'Simulation analysis completed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get medical recommendations based on simulation
+router.get('/:id/recommendations', authMiddleware, async (req, res) => {
+  try {
+    // Implement recommendation logic based on simulation results
+    res.status(200).json({ message: 'Recommendations generated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete simulation
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    // Implement database deletion logic
+    res.status(200).json({ message: 'Simulation deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;

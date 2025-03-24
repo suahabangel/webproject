@@ -1,0 +1,53 @@
+// server/routes/auth.js
+const express = require('express');
+const router = express.Router();
+const { ConfidentialClientApplication } = require('@azure/msal-node');
+const { credential, getSecret } = require('../config/azure');
+
+// Initialize MSAL app for Azure AD authentication
+async function initializeMsalApp() {
+  const clientSecret = await getSecret('auth-client-secret');
+  
+  const msalConfig = {
+    auth: {
+      clientId: process.env.AZURE_CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`,
+      clientSecret
+    }
+  };
+  
+  return new ConfidentialClientApplication(msalConfig);
+}
+
+let msalApp;
+(async () => {
+  msalApp = await initializeMsalApp();
+})().catch(console.error);
+
+// Login route with Azure AD
+router.post('/login', async (req, res) => {
+  try {
+    // Authenticate user against Azure AD
+    const { username, password } = req.body;
+    
+    // Generate authentication URL
+    const authCodeUrlParameters = {
+      scopes: ["user.read"],
+      redirectUri: process.env.REDIRECT_URI,
+    };
+    
+    const authUrl = await msalApp.getAuthCodeUrl(authCodeUrlParameters);
+    
+    // Process authentication and generate tokens
+    // ... Additional authentication logic here
+    
+    res.status(200).json({ success: true, token: 'jwt-token-here' });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(401).json({ success: false, message: 'Authentication failed' });
+  }
+});
+
+// Additional auth routes here...
+
+module.exports = router;
