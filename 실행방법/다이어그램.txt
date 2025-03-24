@@ -1,0 +1,46 @@
+fluid-medical-system/
+├── public/
+│   ├── index.html 완료
+│   ├── favicon.ico ?
+├── src/
+│   ├── components/
+│   │   └── simulations/
+│   │       ├── FluidSimulation.js       # 원본: fluid-simulation.js
+│   │       └── FluidSimulation.css      # 원본: simulation-css.css
+│   ├── pages/
+│   │   └── simulations/
+│   │       ├── FluidSimulationDetailPage.js  # 원본: simulation-detail-page.js
+│   │       └── SimulationsPage.js       완료
+│   ├── services/
+│   │   └── api.js       완료                
+│   ├── utils/
+│   │   ├── fluid-security.js            # 원본: fluid-security-integration.js
+│   │   └── validation.js                # 원본: input-validation.js
+│   ├── middleware/
+│   │   ├── auth.js                      # 원본: auth-enhancements.js
+│   │   └── security.js                  # 원본: nodejs-security-enhancements.js
+│   ├── App.js                           # 일부 코드는 integration-code.js에서 가져옴
+│   ├── index.js                         완료
+│   └── index.css                        # simulation-additional-css.css도 관련 CSS 포함
+└── server/
+    ├── routes/
+    │   ├── auth.js                      # 원본: auth-azure-integration.js
+    │   ├── patients.js                 완료
+    │   ├── drugs.js                     완료
+    │   ├── prescriptions.js             완료
+    │   └── simulations.js               완료
+    ├── config/
+    │   ├── azure.js                     # 원본: azure-integration.js
+    │   └── database.js                  # 원본: database-security.js
+    ├── middleware/
+    │   └── auth.js                      # 원본: auth-enhancements.js(중복)
+    ├── utils/
+    │   └── validation.js                # 원본: input-validation.js(중복)
+    └── server.js                        # 원본: server-security-implementation.js
+
+# 추가 파일 (프로젝트 루트 디렉토리에 배치 권장)
+deployment-guide.md                      # 배포 가이드 문서
+firstpage.html                           # 원본: firstpage.html.html
+fixed-html.html                          # 시스템 아키텍처 플로우차트
+package.json                             # package-security-updates.js의 내용 병합 필요
+security-recommendations.txt              # 보안 권장사항 문서

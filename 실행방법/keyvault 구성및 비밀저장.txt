@@ -1,0 +1,15 @@
+# Key Vault 생성
+az keyvault create \
+    --name fluid-medical-kv \
+    --resource-group fluid-medical-rg \
+    --location eastus
+
+# 블록체인 네트워크 엔드포인트 및 비밀키 저장
+az keyvault secret set --vault-name fluid-medical-kv --name "BLOCKCHAIN-NETWORK-URL" --value "http://blockchain-node:8545"
+az keyvault secret set --vault-name fluid-medical-kv --name "BLOCKCHAIN-PRIVATE-KEY" --value "0xprivatekey..."
+
+# 컨트랙트 주소 저장
+source contract_addresses.env
+az keyvault secret set --vault-name fluid-medical-kv --name "MEDICAL-RECORDS-ADDRESS" --value "$MEDICAL_RECORDS_ADDRESS"
+az keyvault secret set --vault-name fluid-medical-kv --name "PRESCRIPTION-LEDGER-ADDRESS" --value "$PRESCRIPTION_LEDGER_ADDRESS"
+az keyvault secret set --vault-name fluid-medical-kv --name "DRUG-TRACEABILITY-ADDRESS" --value "$DRUG_TRACEABILITY_ADDRESS"

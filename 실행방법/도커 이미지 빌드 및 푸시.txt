@@ -1,0 +1,11 @@
+# 환경 변수 설정
+export REGISTRY_URL=fluidmedicalacr.azurecr.io
+
+# ACR 로그인
+az acr login --name fluidmedicalacr
+
+# 블록체인 서비스 이미지
+docker build -t ${REGISTRY_URL}/fluid-medical-blockchain-service:latest -f docker/blockchain-service.Dockerfile .
+docker push ${REGISTRY_URL}/fluid-medical-blockchain-service:latest
+
+# 다른 마이크로서비스도 동일한 방식으로 빌드 및 푸시

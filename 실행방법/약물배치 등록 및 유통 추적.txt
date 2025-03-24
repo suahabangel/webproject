@@ -1,0 +1,10 @@
+curl -X POST http://<ingress-ip>/api/blockchain/drugs/trace \
+  -H "Content-Type: application/json" \
+  -d '{
+    "drugId": "drug-001",
+    "batchId": "batch-001",
+    "manufacturer": "manufacturer-xyz",
+    "productionDate": "2023-01-01T00:00:00Z",
+    "expiryDate": "2024-01-01T00:00:00Z",
+    "location": "Factory A"
+  }'
