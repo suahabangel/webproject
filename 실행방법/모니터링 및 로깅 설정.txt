@@ -1,4 +1,0 @@
-# Prometheus 및 Grafana 설치
-helm install prometheus prometheus-community/kube-prometheus-stack \
-    --namespace fluid-medical-system \
-    --values monitoring/prometheus-values.yaml

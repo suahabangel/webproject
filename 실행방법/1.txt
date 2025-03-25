@@ -1,7 +1,0 @@
-리소스 그룹 및 인프라 생성
-az group create --name fluid-medical-rg --location eastus
-Azure Container Registry(ACR) 생성
-az acr create --resource-group fluid-medical-rg --name fluidmedicalacr --sku Standard
-블록체인 네트워크 구성 개발 환경:
-# Ganache로 로컬 블록체인 실행
-ganache-cli --deterministic --db ./ganache-db

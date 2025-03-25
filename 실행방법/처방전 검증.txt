@@ -1,1 +1,0 @@
-curl -X GET http://<ingress-ip>/api/blockchain/prescriptions/<prescription-id>/verify
