@@ -1,0 +1,211 @@
+const mongoose = require('mongoose');
+const secureLogger = require('./secureLogger');
+
+// Secure MongoDB connection utility
+class SecureMongoConnector {
+  constructor(options = {}) {
+    this.uri = options.uri || process.env.MONGODB_URI;
+    this.dbName = options.dbName || process.env.MONGODB_DB_NAME;
+    this.user = options.user || process.env.MONGODB_USER;
+    this.password = options.password || process.env.MONGODB_PASSWORD;
+    this.sslCA = options.sslCA || process.env.MONGODB_SSL_CA;
+    this.replicaSet = options.replicaSet || process.env.MONGODB_REPLICA_SET;
+    
+    // Track connection status
+    this.isConnected = false;
+    this.connectionPromise = null;
+    
+    // Set connection options
+    this.options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      dbName: this.dbName,
+      autoIndex: process.env.NODE_ENV !== 'production', // Disable in production
+      maxPoolSize: options.maxPoolSize || 10,
+      serverSelectionTimeoutMS: options.serverSelectionTimeoutMS || 5000,
+      socketTimeoutMS: options.socketTimeoutMS || 45000,
+      connectTimeoutMS: options.connectTimeoutMS || 10000,
+      heartbeatFrequencyMS: options.heartbeatFrequencyMS || 10000,
+      retryWrites: true,
+      w: 'majority', // Write concern
+      readPreference: options.readPreference || 'primary'
+    };
+    
+    // Add SSL configuration if provided
+    if (this.sslCA) {
+      this.options.ssl = true;
+      this.options.sslCA = this.sslCA;
+      this.options.sslValidate = true;
+    }
+    
+    // Add replica set if provided
+    if (this.replicaSet) {
+      this.options.replicaSet = this.replicaSet;
+    }
+    
+    // Configure mongoose
+    mongoose.set('strictQuery', true);
+  }
+  
+  // Build connection URI
+  buildConnectionURI() {
+    if (this.uri) {
+      return this.uri;
+    }
+    
+    // Build URI from components
+    let uri = 'mongodb://';
+    
+    // Add authentication if provided
+    if (this.user && this.password) {
+      uri += `${encodeURIComponent(this.user)}:${encodeURIComponent(this.password)}@`;
+    }
+    
+    // Add hosts
+    uri += process.env.MONGODB_HOSTS || 'localhost:27017';
+    
+    // Add database name
+    uri += `/${this.dbName}`;
+    
+    // Add auth source if provided
+    if (process.env.MONGODB_AUTH_SOURCE) {
+      uri += `?authSource=${process.env.MONGODB_AUTH_SOURCE}`;
+    }
+    
+    return uri;
+  }
+  
+  // Connect to MongoDB
+  async connect() {
+    if (this.isConnected) {
+      return mongoose.connection;
+    }
+    
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+    
+    this.connectionPromise = new Promise(async (resolve, reject) => {
+      try {
+        const uri = this.buildConnectionURI();
+        
+        // Set up connection logging
+        mongoose.connection.on('connected', () => {
+          this.isConnected = true;
+          secureLogger.info('MongoDB connected successfully');
+        });
+        
+        mongoose.connection.on('disconnected', () => {
+          this.isConnected = false;
+          secureLogger.warn('MongoDB disconnected');
+        });
+        
+        mongoose.connection.on('error', (err) => {
+          secureLogger.error('MongoDB connection error:', err);
+        });
+        
+        // Connect to MongoDB
+        await mongoose.connect(uri, this.options);
+        
+        // Add security plugins
+        this.addSecurityPlugins();
+        
+        // Resolve with the connection
+        resolve(mongoose.connection);
+      } catch (error) {
+        secureLogger.error({
+          message: 'Failed to connect to MongoDB',
+          error: error.message,
+          stack: error.stack
+        });
+        
+        this.connectionPromise = null;
+        reject(error);
+      }
+    });
+    
+    return this.connectionPromise;
+  }
+  
+  // Add security plugins to mongoose
+  addSecurityPlugins() {
+    // Plugin for sanitizing queries
+    const sanitizeQuery = function(schema) {
+      // Sanitize query inputs to prevent NoSQL injection
+      schema.pre('find', function() {
+        this._sanitizeQuery(this.getQuery());
+      });
+      
+      schema.pre('findOne', function() {
+        this._sanitizeQuery(this.getQuery());
+      });
+      
+      schema.pre('findOneAndUpdate', function() {
+        this._sanitizeQuery(this.getQuery());
+        this._sanitizeQuery(this.getUpdate(), true);
+      });
+      
+      schema.pre('updateOne', function() {
+        this._sanitizeQuery(this.getQuery());
+        this._sanitizeQuery(this.getUpdate(), true);
+      });
+      
+      schema.pre('updateMany', function() {
+        this._sanitizeQuery(this.getQuery());
+        this._sanitizeQuery(this.getUpdate(), true);
+      });
+      
+      // Helper to sanitize query objects
+      mongoose.Query.prototype._sanitizeQuery = function(query, isUpdate = false) {
+        if (!query || typeof query !== 'object') {
+          return;
+        }
+        
+        // Process each key for NoSQL injection patterns
+        Object.keys(query).forEach(key => {
+          // For $where operations (high risk)
+          if (key === '$where' && !isUpdate) {
+            throw new Error('$where operator is not allowed');
+          }
+          
+          // For any parameter using JavaScript execution
+          if (key === '$expr' && !isUpdate) {
+            // We'll allow $expr but log it
+            secureLogger.securityLog({
+              type: 'MONGO_EXPR_USED',
+              query: JSON.stringify(query),
+              collection: this.model.collection.name
+            });
+          }
+          
+          // For JavaScript evaluation functions
+          if (['$function'].includes(key) && !isUpdate) {
+            throw new Error(`${key} operator is not allowed`);
+          }
+          
+          // Recursively process nested objects
+          if (query[key] && typeof query[key] === 'object' && !Buffer.isBuffer(query[key])) {
+            this._sanitizeQuery(query[key], isUpdate);
+          }
+        });
+        
+        return query;
+      };
+    };
+    
+    // Register plugins
+    mongoose.plugin(sanitizeQuery);
+  }
+  
+  // Disconnect from MongoDB
+  async disconnect() {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+      this.isConnected = false;
+      this.connectionPromise = null;
+      secureLogger.info('MongoDB disconnected');
+    }
+  }
+}
+
+module.exports = SecureMongoConnector;

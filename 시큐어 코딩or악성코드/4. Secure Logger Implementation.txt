@@ -1,0 +1,133 @@
+const winston = require('winston');
+const { format } = winston;
+const DailyRotateFile = require('winston-daily-rotate-file');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure log directory exists
+const logDir = 'logs';
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
+// Sensitive data filter
+const sensitiveFields = ['password', 'token', 'ssn', 'creditCard', 'key', 'secret'];
+
+const redactSensitiveData = format((info) => {
+  if (info.message && typeof info.message === 'object') {
+    const sanitized = { ...info.message };
+    
+    // Deep search and redact sensitive data
+    const redactObject = (obj) => {
+      if (!obj || typeof obj !== 'object') return;
+      
+      Object.keys(obj).forEach(key => {
+        // Check if field name contains sensitive information
+        if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
+          obj[key] = '[REDACTED]';
+        } else if (typeof obj[key] === 'object') {
+          redactObject(obj[key]);
+        }
+      });
+    };
+    
+    redactObject(sanitized);
+    info.message = sanitized;
+  }
+  
+  // Also check meta fields
+  if (info.meta) {
+    redactObject(info.meta);
+  }
+  
+  return info;
+});
+
+// Create a secure logging configuration
+const secureLogger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: format.combine(
+    format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }),
+    format.errors({ stack: true }),
+    redactSensitiveData(),
+    format.json()
+  ),
+  defaultMeta: { service: 'medical-fluid-system' },
+  transports: [
+    // Console output for development
+    new winston.transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(info => {
+          const { timestamp, level, message, ...rest } = info;
+          return `${timestamp} ${level}: ${typeof message === 'object' ? JSON.stringify(message) : message} ${Object.keys(rest).length ? JSON.stringify(rest) : ''}`;
+        })
+      ),
+      silent: process.env.NODE_ENV === 'production'
+    }),
+    
+    // Rotating file transport for production logs
+    new DailyRotateFile({
+      dirname: logDir,
+      filename: 'application-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '14d',
+      auditFile: path.join(logDir, 'audit.json'),
+      zippedArchive: true
+    }),
+    
+    // Separate error log
+    new DailyRotateFile({
+      dirname: logDir,
+      filename: 'error-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '30d',
+      level: 'error',
+      zippedArchive: true
+    })
+  ]
+});
+
+// Create a security-specific logger
+secureLogger.securityLog = (message, meta = {}) => {
+  secureLogger.warn({
+    securityEvent: true,
+    ...message
+  }, { ...meta });
+};
+
+// Add security event logging methods
+secureLogger.authFailure = (userId, ip, reason) => {
+  secureLogger.securityLog({
+    type: 'AUTH_FAILURE',
+    userId,
+    ip,
+    reason
+  });
+};
+
+secureLogger.accessDenied = (userId, resource, action, ip) => {
+  secureLogger.securityLog({
+    type: 'ACCESS_DENIED',
+    userId,
+    resource,
+    action,
+    ip
+  });
+};
+
+secureLogger.suspiciousActivity = (userId, activity, details, ip) => {
+  secureLogger.securityLog({
+    type: 'SUSPICIOUS_ACTIVITY',
+    userId,
+    activity,
+    details,
+    ip
+  });
+};
+
+module.exports = secureLogger;

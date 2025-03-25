@@ -1,0 +1,105 @@
+const crypto = require('crypto');
+const secureLogger = require('./secureLogger');
+
+// CSRF token generation and validation middleware
+class CSRFProtection {
+  constructor(options = {}) {
+    this.cookieName = options.cookieName || 'csrf_token';
+    this.headerName = options.headerName || 'X-CSRF-Token';
+    this.cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: options.tokenExpiry || 3600000, // 1 hour default
+      signed: true,
+      ...options.cookieOptions
+    };
+    this.ignoredMethods = options.ignoredMethods || ['GET', 'HEAD', 'OPTIONS'];
+    this.ignoredPaths = options.ignoredPaths || ['/api/health', '/api/metrics'];
+  }
+
+  // Generate a strong CSRF token
+  generateToken() {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  // Middleware to set CSRF token
+  setToken() {
+    return (req, res, next) => {
+      // Skip if user already has a valid token
+      if (req.signedCookies && req.signedCookies[this.cookieName]) {
+        return next();
+      }
+
+      // Generate new token
+      const csrfToken = this.generateToken();
+      
+      // Set in cookie
+      res.cookie(this.cookieName, csrfToken, this.cookieOptions);
+      
+      // Make token available to templates
+      if (req.session) {
+        req.session.csrfToken = csrfToken;
+      }
+      
+      // Continue
+      next();
+    };
+  }
+
+  // Middleware to verify CSRF token
+  verifyToken() {
+    return (req, res, next) => {
+      // Skip for ignored methods
+      if (this.ignoredMethods.includes(req.method)) {
+        return next();
+      }
+      
+      // Skip for ignored paths
+      if (this.ignoredPaths.some(path => req.path.startsWith(path))) {
+        return next();
+      }
+      
+      // Get the tokens from request
+      const cookieToken = req.signedCookies[this.cookieName];
+      const headerToken = req.headers[this.headerName.toLowerCase()];
+      const bodyToken = req.body && req.body._csrf;
+      
+      // Use either header or body token
+      const requestToken = headerToken || bodyToken;
+      
+      // Verify tokens exist and match
+      if (!cookieToken || !requestToken || cookieToken !== requestToken) {
+        secureLogger.securityLog({
+          type: 'CSRF_ATTEMPT',
+          path: req.path,
+          method: req.method,
+          ip: req.ip,
+          userId: req.user?.id || 'unauthenticated',
+          hasToken: !!requestToken
+        });
+        
+        return res.status(403).json({
+          status: 'error',
+          message: 'Invalid or missing CSRF token'
+        });
+      }
+      
+      // Continue with the request
+      next();
+    };
+  }
+
+  // Helper to include token in rendered views
+  includeToken(req, res, next) {
+    if (req.session && req.session.csrfToken) {
+      res.locals.csrfToken = req.session.csrfToken;
+    } else if (req.signedCookies && req.signedCookies[this.cookieName]) {
+      res.locals.csrfToken = req.signedCookies[this.cookieName];
+    }
+    next();
+  }
+}
+
+module.exports = CSRFProtection;

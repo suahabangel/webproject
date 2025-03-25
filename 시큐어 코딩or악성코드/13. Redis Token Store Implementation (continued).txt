@@ -1,0 +1,198 @@
+const redis = require('redis');
+const { promisify } = require('util');
+const secureLogger = require('./secureLogger');
+
+class RedisTokenStore {
+  constructor(options = {}) {
+    // Connect to Redis
+    this.client = redis.createClient({
+      host: options.host || process.env.REDIS_HOST || 'localhost',
+      port: options.port || process.env.REDIS_PORT || 6379,
+      password: options.password || process.env.REDIS_PASSWORD,
+      tls: process.env.NODE_ENV === 'production' ? {} : undefined,
+      db: options.db || 0
+    });
+    
+    // Key prefix for token storage
+    this.keyPrefix = options.keyPrefix || 'token:';
+    
+    // Default token expiry (24 hours)
+    this.defaultExpiry = options.defaultExpiry || 86400;
+    
+    // Blacklist prefix for revoked tokens
+    this.blacklistPrefix = options.blacklistPrefix || 'blacklist:';
+    
+    // Promisify Redis methods
+    this.getAsync = promisify(this.client.get).bind(this.client);
+    this.setAsync = promisify(this.client.set).bind(this.client);
+    this.delAsync = promisify(this.client.del).bind(this.client);
+    this.existsAsync = promisify(this.client.exists).bind(this.client);
+    this.expireAsync = promisify(this.client.expire).bind(this.client);
+    this.keysAsync = promisify(this.client.keys).bind(this.client);
+    
+    // Set up error handling
+    this.client.on('error', (err) => {
+      secureLogger.error('Redis token store error:', err);
+    });
+  }
+  
+  // Store a token with associated metadata
+  async storeToken(userId, tokenId, tokenData, expirySeconds = this.defaultExpiry) {
+    try {
+      const key = `${this.keyPrefix}${userId}:${tokenId}`;
+      const data = typeof tokenData === 'string' ? tokenData : JSON.stringify(tokenData);
+      
+      await this.setAsync(key, data,'EX', expirySeconds);
+      
+      return true;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to store token in Redis',
+        userId,
+        tokenId,
+        error: error.message
+      });
+      throw new Error('Token storage failed');
+    }
+  }
+  
+  // Retrieve a token and its metadata
+  async getToken(userId, tokenId) {
+    try {
+      const key = `${this.keyPrefix}${userId}:${tokenId}`;
+      const data = await this.getAsync(key);
+      
+      if (!data) {
+        return null;
+      }
+      
+      try {
+        // Attempt to parse as JSON
+        return JSON.parse(data);
+      } catch (e) {
+        // Return as string if not valid JSON
+        return data;
+      }
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to retrieve token from Redis',
+        userId,
+        tokenId,
+        error: error.message
+      });
+      return null;
+    }
+  }
+  
+  // Remove a token
+  async removeToken(userId, tokenId) {
+    try {
+      const key = `${this.keyPrefix}${userId}:${tokenId}`;
+      await this.delAsync(key);
+      return true;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to remove token from Redis',
+        userId,
+        tokenId,
+        error: error.message
+      });
+      return false;
+    }
+  }
+  
+  // Revoke a token by adding it to blacklist
+  async revokeToken(tokenId, expirySeconds = this.defaultExpiry) {
+    try {
+      const key = `${this.blacklistPrefix}${tokenId}`;
+      await this.setAsync(key, Date.now().toString(), 'EX', expirySeconds);
+      return true;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to revoke token in Redis',
+        tokenId,
+        error: error.message
+      });
+      return false;
+    }
+  }
+  
+  // Check if a token has been revoked
+  async isTokenRevoked(tokenId) {
+    try {
+      const key = `${this.blacklistPrefix}${tokenId}`;
+      const exists = await this.existsAsync(key);
+      return exists === 1;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to check token revocation status',
+        tokenId,
+        error: error.message
+      });
+      // Default to treating as revoked on error for security
+      return true;
+    }
+  }
+  
+  // Get all active tokens for a user
+  async getUserTokens(userId) {
+    try {
+      const pattern = `${this.keyPrefix}${userId}:*`;
+      const keys = await this.keysAsync(pattern);
+      
+      const tokens = [];
+      for (const key of keys) {
+        const tokenId = key.split(':')[2];
+        const data = await this.getAsync(key);
+        
+        tokens.push({
+          tokenId,
+          data: data ? JSON.parse(data) : null
+        });
+      }
+      
+      return tokens;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to retrieve user tokens from Redis',
+        userId,
+        error: error.message
+      });
+      return [];
+    }
+  }
+  
+  // Remove all tokens for a user
+  async removeAllUserTokens(userId) {
+    try {
+      const pattern = `${this.keyPrefix}${userId}:*`;
+      const keys = await this.keysAsync(pattern);
+      
+      if (keys.length === 0) {
+        return true;
+      }
+      
+      for (const key of keys) {
+        await this.delAsync(key);
+      }
+      
+      return true;
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to remove all user tokens from Redis',
+        userId,
+        error: error.message
+      });
+      return false;
+    }
+  }
+  
+  // Close Redis connection
+  close() {
+    if (this.client) {
+      this.client.quit();
+    }
+  }
+}
+
+module.exports = RedisTokenStore;

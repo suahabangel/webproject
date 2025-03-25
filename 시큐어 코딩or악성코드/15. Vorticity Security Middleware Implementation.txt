@@ -1,0 +1,205 @@
+const secureLogger = require('./secureLogger');
+const { TurbulenceDetector } = require('./turbulenceDetector');
+const { RedisTokenStore } = require('./redisTokenStore');
+
+class VorticitySecurityMiddleware {
+  constructor(options = {}) {
+    this.turbulenceDetector = new TurbulenceDetector({
+      reynoldsThreshold: options.reynoldsThreshold || 2500,
+      vorticityThreshold: options.vorticityThreshold || 0.7,
+      divergenceThreshold: options.divergenceThreshold || 0.5,
+      timeWindow: options.timeWindow || 60 * 1000 // 1 minute
+    });
+    
+    this.tokenStore = new RedisTokenStore({
+      host: options.redisHost || process.env.REDIS_HOST,
+      port: options.redisPort || process.env.REDIS_PORT,
+      password: options.redisPassword || process.env.REDIS_PASSWORD,
+      keyPrefix: 'vorticity:',
+      blacklistPrefix: 'vorticity:blocked:'
+    });
+    
+    // Security mode
+    this.mode = options.mode || 'detection'; // 'detection', 'prevention', 'aggressive'
+    
+    // Response actions
+    this.responseActions = options.responseActions || {
+      delayResponse: true,
+      injectDeception: true,
+      addCaptcha: false
+    };
+  }
+  
+  // Get the middleware function
+  getMiddleware() {
+    return async (req, res, next) => {
+      try {
+        // Skip for certain paths
+        if (this.isExcludedPath(req.path)) {
+          return next();
+        }
+        
+        // Get client identifier
+        const clientId = req.user?.id || req.ip;
+        
+        // Check if client is already blocked
+        const isBlocked = await this.tokenStore.isTokenRevoked(clientId);
+        if (isBlocked) {
+          return this.handleBlockedClient(req, res);
+        }
+        
+        // Analyze request for turbulence
+        const turbulenceAnalysis = this.turbulenceDetector.processRequest(req);
+        
+        // Add analysis to request object for logging
+        req.vorticityAnalysis = turbulenceAnalysis;
+        
+        // Log analysis if turbulent
+        if (turbulenceAnalysis.isTurbulent) {
+          secureLogger.securityLog({
+            type: 'VORTICITY_ALERT',
+            clientId,
+            path: req.path,
+            method: req.method,
+            measures: turbulenceAnalysis.measures,
+            alertLevel: turbulenceAnalysis.alertLevel
+          });
+        }
+        
+        // Take action based on turbulence analysis
+        if (turbulenceAnalysis.isTurbulent) {
+          if (this.mode === 'prevention' || this.mode === 'aggressive') {
+            if (turbulenceAnalysis.alertLevel === 'critical') {
+              // Block client in aggressive mode
+              if (this.mode === 'aggressive') {
+                await this.tokenStore.revokeToken(clientId, 600); // Block for 10 minutes
+                return this.handleBlockedClient(req, res);
+              }
+              
+              // Add response modifications in prevention mode
+              this.modifyResponse(req, res);
+            }
+          }
+          
+          // Add response header for tracking
+          res.set('X-Flow-Analysis', 'irregular');
+        }
+        
+        // Continue with request
+        next();
+      } catch (error) {
+        secureLogger.error({
+          message: 'Vorticity security middleware error',
+          error: error.message,
+          stack: error.stack
+        });
+        
+        // Continue despite errors in the security middleware
+        next();
+      }
+    };
+  }
+  
+  // Check if path should be excluded from analysis
+  isExcludedPath(path) {
+    const excludedPaths = [
+      '/favicon.ico',
+      '/robots.txt',
+      '/health',
+      '/metrics',
+      '/static/',
+      '/images/',
+      '/css/',
+      '/js/'
+    ];
+    
+    return excludedPaths.some(prefix => path.startsWith(prefix));
+  }
+  
+  // Handle blocked client
+  handleBlockedClient(req, res) {
+    secureLogger.securityLog({
+      type: 'BLOCKED_ACCESS_ATTEMPT',
+      clientId: req.user?.id || req.ip,
+      path: req.path,
+      method: req.method,
+      headers: req.headers
+    });
+    
+    // Return 403 with delay to slow down attackers
+    setTimeout(() => {
+      res.status(403).json({
+        status: 'error',
+        message: 'Access denied due to suspicious activity'
+      });
+    }, 2000);
+    
+    return false;
+  }
+  
+  // Modify response to counter potential attacks
+  modifyResponse(req, res) {
+    // Store original send method
+    const originalSend = res.send;
+    const originalJson = res.json;
+    
+    // Add delay to responses
+    if (this.responseActions.delayResponse) {
+      // Add random delay between 1-3 seconds
+      const delay = 1000 + Math.random() * 2000;
+      
+      res.send = function(...args) {
+        setTimeout(() => {
+          originalSend.apply(this, args);
+        }, delay);
+        return this;
+      };
+      
+      res.json = function(...args) {
+        setTimeout(() => {
+          originalJson.apply(this, args);
+        }, delay);
+        return this;
+      };
+    }
+    
+    // Inject deceptive data in responses for potential attackers
+    if (this.responseActions.injectDeception) {
+      res.json = function(data) {
+        // Only modify if it's an object or array response
+        if (data && typeof data === 'object') {
+          // Generate a honeypot field
+          const honeyField = `_${Math.random().toString(36).substring(2, 10)}`;
+          
+          if (Array.isArray(data)) {
+            // For arrays, add to the first item if available
+            if (data.length > 0 && typeof data[0] === 'object') {
+              data[0][honeyField] = 'HID_' + Math.random().toString(36).substring(2);
+            }
+          } else {
+            // For objects, add directly
+            data[honeyField] = 'HID_' + Math.random().toString(36).substring(2);
+          }
+        }
+        
+        return originalJson.call(this, data);
+      };
+    }
+    
+    // Add CAPTCHA requirement
+    if (this.responseActions.addCaptcha) {
+      // We'll just set a header to indicate CAPTCHA should be shown
+      // The actual implementation would be handled by the client
+      res.set('X-Require-Captcha', 'true');
+    }
+  }
+  
+  // Close resources
+  close() {
+    if (this.tokenStore) {
+      this.tokenStore.close();
+    }
+  }
+}
+
+module.exports = VorticitySecurityMiddleware;

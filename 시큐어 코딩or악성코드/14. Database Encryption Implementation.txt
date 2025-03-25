@@ -1,0 +1,234 @@
+const crypto = require('crypto');
+const secureLogger = require('./secureLogger');
+const azureKeyVault = require('./azureKeyVault');
+
+class DatabaseEncryption {
+  constructor(options = {}) {
+    // Use key from Azure Key Vault if available, otherwise use environment variable
+    this.encryptionKey = options.encryptionKey || process.env.DB_ENCRYPTION_KEY;
+    this.algorithm = options.algorithm || 'aes-256-gcm';
+    this.useKeyVault = options.useKeyVault || false;
+    this.keyVaultKeyName = options.keyVaultKeyName || 'database-encryption-key';
+    
+    // Fields to encrypt/decrypt
+    this.sensitiveFields = options.sensitiveFields || [
+      'ssn',
+      'creditCard',
+      'phoneNumber',
+      'address',
+      'medicalData',
+      'patientNotes',
+      'diagnosis',
+      'treatmentPlan',
+      'medicationHistory'
+    ];
+    
+    // Initialize with key from Key Vault if needed
+    if (this.useKeyVault) {
+      this.initializeFromKeyVault();
+    } else if (!this.encryptionKey) {
+      throw new Error('Database encryption key not provided');
+    }
+  }
+  
+  // Initialize encryption key from Azure Key Vault
+  async initializeFromKeyVault() {
+    try {
+      this.encryptionKey = await azureKeyVault.getSecret(this.keyVaultKeyName);
+      if (!this.encryptionKey) {
+        throw new Error('Failed to retrieve encryption key from Key Vault');
+      }
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to initialize database encryption from Key Vault',
+        error: error.message
+      });
+      throw error;
+    }
+  }
+  
+  // Encrypt a single value
+  encrypt(value) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    
+    try {
+      // Generate a random initialization vector
+      const iv = crypto.randomBytes(16);
+      
+      // Create cipher
+      const cipher = crypto.createCipheriv(
+        this.algorithm,
+        Buffer.from(this.encryptionKey, 'hex'),
+        iv
+      );
+      
+      // Convert value to string if needed
+      const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+      
+      // Encrypt the value
+      let encrypted = cipher.update(valueStr, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      
+      // Get the authentication tag
+      const authTag = cipher.getAuthTag().toString('hex');
+      
+      // Return the encrypted data, IV, and auth tag
+      return {
+        encrypted,
+        iv: iv.toString('hex'),
+        authTag,
+        algorithm: this.algorithm
+      };
+    } catch (error) {
+      secureLogger.error({
+        message: 'Encryption error',
+        error: error.message
+      });
+      throw new Error('Data encryption failed');
+    }
+  }
+  
+  // Decrypt a single value
+  decrypt(encryptedData) {
+    if (!encryptedData || !encryptedData.encrypted) {
+      return null;
+    }
+    
+    try {
+      // Create decipher
+      const decipher = crypto.createDecipheriv(
+        encryptedData.algorithm || this.algorithm,
+        Buffer.from(this.encryptionKey, 'hex'),
+        Buffer.from(encryptedData.iv, 'hex')
+      );
+      
+      // Set auth tag
+      decipher.setAuthTag(Buffer.from(encryptedData.authTag, 'hex'));
+      
+      // Decrypt the value
+      let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      // Try to parse as JSON if it's a JSON string
+      try {
+        return JSON.parse(decrypted);
+      } catch (e) {
+        // Return as is if not valid JSON
+        return decrypted;
+      }
+    } catch (error) {
+      secureLogger.error({
+        message: 'Decryption error',
+        error: error.message
+      });
+      throw new Error('Data decryption failed');
+    }
+  }
+  
+  // Process an object, encrypting sensitive fields
+  encryptObject(object) {
+    if (!object || typeof object !== 'object') {
+      return object;
+    }
+    
+    const result = { ...object };
+    
+    for (const field of this.sensitiveFields) {
+      if (result[field] !== undefined && result[field] !== null) {
+        result[field] = this.encrypt(result[field]);
+      }
+    }
+    
+    return result;
+  }
+  
+  // Process an object, decrypting sensitive fields
+  decryptObject(object) {
+    if (!object || typeof object !== 'object') {
+      return object;
+    }
+    
+    const result = { ...object };
+    
+    for (const field of this.sensitiveFields) {
+      if (result[field] && result[field].encrypted) {
+        try {
+          result[field] = this.decrypt(result[field]);
+        } catch (error) {
+          secureLogger.error({
+            message: `Failed to decrypt field: ${field}`,
+            error: error.message
+          });
+          // Leave as encrypted on error
+        }
+      }
+    }
+    
+    return result;
+  }
+  
+  // Middleware to decrypt database results
+  createDecryptionMiddleware() {
+    const encryption = this;
+    
+    return function(req, res, next) {
+      // Store original json method
+      const originalJson = res.json;
+      
+      // Override json method to decrypt data before sending
+      res.json = function(data) {
+        let processedData = data;
+        
+        // Decrypt data if it's an object or array of objects
+        if (data && typeof data === 'object') {
+          if (Array.isArray(data)) {
+            processedData = data.map(item => encryption.decryptObject(item));
+          } else {
+            processedData = encryption.decryptObject(data);
+          }
+        }
+        
+        // Call original json method with processed data
+        return originalJson.call(this, processedData);
+      };
+      
+      next();
+    };
+  }
+  
+  // Rotate encryption key
+  async rotateEncryptionKey(newKey) {
+    try {
+      // Store old key
+      const oldKey = this.encryptionKey;
+      
+      // Update to new key
+      this.encryptionKey = newKey;
+      
+      // Return function to reencrypt data
+      return (encryptedData) => {
+        // Temporarily restore old key
+        this.encryptionKey = oldKey;
+        
+        // Decrypt with old key
+        const decrypted = this.decrypt(encryptedData);
+        
+        // Restore new key
+        this.encryptionKey = newKey;
+        
+        // Encrypt with new key
+        return this.encrypt(decrypted);
+      };
+    } catch (error) {
+      secureLogger.error({
+        message: 'Failed to rotate encryption key',
+        error: error.message
+      });
+      throw new Error('Encryption key rotation failed');
+    }
+  }
+}
+
+module.exports = DatabaseEncryption;

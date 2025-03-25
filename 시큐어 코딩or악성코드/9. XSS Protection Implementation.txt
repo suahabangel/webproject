@@ -1,0 +1,134 @@
+const xss = require('xss');
+const DOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+
+// Create window object for DOMPurify
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
+
+// Configuration for the XSS filter
+const xssOptions = {
+  whiteList: {
+    a: ['href', 'title', 'target', 'rel'],
+    p: [],
+    br: [],
+    b: [],
+    i: [],
+    strong: [],
+    em: [],
+    ul: [],
+    ol: [],
+    li: [],
+    h1: [],
+    h2: [],
+    h3: [],
+    h4: [],
+    h5: [],
+    h6: [],
+    blockquote: [],
+    code: [],
+    pre: []
+  },
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style', 'iframe', 'object'],
+  css: false
+};
+
+// Create XSS filter instance
+const xssFilter = new xss.FilterXSS(xssOptions);
+
+// Middleware to sanitize request body
+const sanitizeBody = (req, res, next) => {
+  if (!req.body) {
+    return next();
+  }
+  
+  const sanitizeValue = (value) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    
+    // Apply both xss-clean and DOMPurify for maximum security
+    const filtered = xssFilter.process(value);
+    return purify.sanitize(filtered);
+  };
+  
+  const sanitizeObject = (obj) => {
+    Object.keys(obj).forEach(key => {
+      if (typeof obj[key] === 'string') {
+        obj[key] = sanitizeValue(obj[key]);
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        sanitizeObject(obj[key]);
+      }
+    });
+  };
+  
+  sanitizeObject(req.body);
+  next();
+};
+
+// Middleware to sanitize URL parameters
+const sanitizeParams = (req, res, next) => {
+  if (req.params) {
+    Object.keys(req.params).forEach(key => {
+      if (typeof req.params[key] === 'string') {
+        req.params[key] = xssFilter.process(req.params[key]);
+      }
+    });
+  }
+  
+  if (req.query) {
+    Object.keys(req.query).forEach(key => {
+      if (typeof req.query[key] === 'string') {
+        req.query[key] = xssFilter.process(req.query[key]);
+      }
+    });
+  }
+  
+  next();
+};
+
+// Middleware to set security headers
+const setSecurityHeaders = (req, res, next) => {
+  // Content-Security-Policy
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' https://cdnjs.cloudflare.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "img-src 'self' data:; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "connect-src 'self'; " +
+    "frame-src 'none'; " +
+    "object-src 'none'; " +
+    "base-uri 'self';"
+  );
+  
+  // X-XSS-Protection as backup for older browsers
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+};
+
+// Safe HTML renderer with strict sanitization
+const renderSafeHTML = (html) => {
+  // First run it through xss-clean
+  const cleanedHtml = xssFilter.process(html);
+  
+  // Then apply DOMPurify with strict options
+  return purify.sanitize(cleanedHtml, {
+    FORBID_TAGS: ['style', 'script', 'iframe', 'form', 'object', 'embed', 'input', 'textarea', 'select'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+    ALLOW_DATA_ATTR: false,
+    USE_PROFILES: { html: true }
+  });
+};
+
+module.exports = {
+  sanitizeBody,
+  sanitizeParams,
+  setSecurityHeaders,
+  renderSafeHTML,
+  xssFilter,
+  purify
+};

@@ -1,0 +1,144 @@
+const { promisify } = require('util');
+const redis = require('redis');
+const ipaddr = require('ipaddr.js');
+const secureLogger = require('./secureLogger');
+const fluidMetrics = require('./fluidMetrics');
+
+// Initialize Redis client for tracking
+const redisClient = redis.createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.NODE_ENV === 'production' ? {} : undefined
+});
+
+// Promisify Redis methods
+const redisGet = promisify(redisClient.get).bind(redisClient);
+const redisSetEx = promisify(redisClient.setex).bind(redisClient);
+const redisIncr = promisify(redisClient.incr).bind(redisClient);
+const redisExpire = promisify(redisClient.expire).bind(redisClient);
+
+// Fluid Security Middleware - implements traffic flow analysis
+const fluidSecurityMiddleware = async (req, res, next) => {
+  try {
+    const ip = req.ip || req.connection.remoteAddress;
+    const normalizedIP = normalizeIP(ip);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const path = req.path;
+    const method = req.method;
+    
+    // Keys for rate limiting
+    const ipKey = `request:ip:${normalizedIP}`;
+    const pathKey = `request:path:${path}`;
+    const userAgentKey = `request:ua:${userAgent.substring(0, 100)}`;
+    
+    // Track request metrics
+    await Promise.all([
+      incrementCounter(ipKey, 60 * 60), // 1 hour expiry
+      incrementCounter(pathKey, 60 * 60),
+      incrementCounter(userAgentKey, 60 * 60)
+    ]);
+    
+    // Get current metrics
+    const [ipCount, pathCount, uaCount] = await Promise.all([
+      redisGet(ipKey),
+      redisGet(pathKey),
+      redisGet(userAgentKey)
+    ]);
+    
+    // Calculate Reynolds number (simplified for this example)
+    // Reynolds number in this context is a measure of the turbulence of the traffic
+    const reynoldsNumber = fluidMetrics.calculateReynoldsNumber(
+      parseInt(ipCount) || 1,
+      parseInt(pathCount) || 1,
+      parseInt(uaCount) || 1
+    );
+    
+    // Calculate vorticity (rate of rotation) for this request
+    const vorticity = fluidMetrics.calculateVorticity(req, reynoldsNumber);
+    
+    // Check for turbulence indicators
+    const isTurbulent = reynoldsNumber > 2300; // Standard fluid dynamics threshold
+    const hasAbnormalVorticity = vorticity > 0.7; // Threshold based on testing
+    
+    // Add fluid metrics to request for later use
+    req.fluidMetrics = {
+      reynoldsNumber,
+      vorticity,
+      isTurbulent,
+      hasAbnormalVorticity
+    };
+    
+    // Log metrics for analysis
+    if (process.env.NODE_ENV !== 'production' || isTurbulent || hasAbnormalVorticity) {
+      secureLogger.debug({
+        type: 'FLUID_METRICS',
+        ip: normalizedIP,
+        path,
+        method,
+        reynoldsNumber,
+        vorticity,
+        isTurbulent,
+        hasAbnormalVorticity
+      });
+    }
+    
+    // Check for attack patterns
+    if (isTurbulent && hasAbnormalVorticity) {
+      // This indicates potential DDoS or brute force attack
+      secureLogger.securityLog({
+        type: 'TURBULENT_FLOW_DETECTED',
+        ip: normalizedIP,
+        path,
+        method,
+        reynoldsNumber,
+        vorticity
+      });
+      
+      // Implement defensive actions
+      if (reynoldsNumber > 5000) {
+        // Severe attack - block temporarily
+        await redisSetEx(`blocked:ip:${normalizedIP}`, 300, 'blocked'); // Block for 5 minutes
+        return res.status(429).json({
+          status: 'error',
+          message: 'Too many requests. Please try again later.'
+        });
+      }
+    }
+    
+    // Continue if no severe issues
+    next();
+  } catch (error) {
+    secureLogger.error({
+      message: 'Fluid security middleware error',
+      error: error.message,
+      stack: error.stack
+    });
+    next(); // Still allow the request to proceed even if our analytics fail
+  }
+};
+
+// Helper to normalize IP addresses (handles IPv4 and IPv6)
+function normalizeIP(ip) {
+  try {
+    const addr = ipaddr.parse(ip);
+    // Convert IPv6 to IPv4 if it's an IPv4-mapped IPv6 address
+    if (addr.kind() === 'ipv6' && addr.isIPv4MappedAddress()) {
+      return addr.toIPv4Address().toString();
+    }
+    return addr.toString();
+  } catch (e) {
+    return ip.replace(/^.*:/, ''); // Simple fallback
+  }
+}
+
+// Helper to increment a counter with expiry
+async function incrementCounter(key, expiry) {
+  const count = await redisIncr(key);
+  if (count === 1) {
+    await redisExpire(key, expiry);
+  }
+  return count;
+}
+
+module.exports = fluidSecurityMiddleware;

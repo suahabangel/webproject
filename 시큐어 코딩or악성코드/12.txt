@@ -1,0 +1,255 @@
+const { Vector2D, Matrix2D } = require('./mathUtils');
+const secureLogger = require('./secureLogger');
+
+class TurbulenceDetector {
+  constructor(options = {}) {
+    // Thresholds for turbulence detection
+    this.reynoldsThreshold = options.reynoldsThreshold || 2300;
+    this.vorticityThreshold = options.vorticityThreshold || 0.7;
+    this.divergenceThreshold = options.divergenceThreshold || 0.5;
+    this.timeWindow = options.timeWindow || 60 * 1000; // 1 minute
+    
+    // Store request flow data for analysis
+    this.flowVectors = new Map();
+    this.alertStatus = new Map();
+    
+    // Clean up old data periodically
+    setInterval(() => this.cleanupOldData(), this.timeWindow / 2);
+  }
+  
+  // Process a new request and check for turbulence
+  processRequest(req) {
+    const clientId = req.user?.id || req.ip;
+    const timestamp = Date.now();
+    const path = req.path;
+    
+    // Create flow vector for this request
+    const requestVector = this.createRequestVector(req);
+    
+    // Get client's flow history
+    if (!this.flowVectors.has(clientId)) {
+      this.flowVectors.set(clientId, []);
+    }
+    const clientFlows = this.flowVectors.get(clientId);
+    
+    // Add current request to flow history
+    clientFlows.push({
+      vector: requestVector,
+      timestamp,
+      path
+    });
+    
+    // Analyze flow patterns if we have enough data
+    if (clientFlows.length >= 5) {
+      return this.analyzeFlowPatterns(clientId, clientFlows);
+    }
+    
+    return {
+      isTurbulent: false,
+      measures: {
+        reynolds: 0,
+        vorticity: 0,
+        divergence: 0
+      }
+    };
+  }
+  
+  // Create a vector representation of a request
+  createRequestVector(req) {
+    // Convert request characteristics to a 2D vector
+    // Method weight
+    let methodValue = 0;
+    switch (req.method) {
+      case 'GET': methodValue = 1; break;
+      case 'POST': methodValue = 3; break;
+      case 'PUT': methodValue = 4; break;
+      case 'DELETE': methodValue = 5; break;
+      default: methodValue = 2;
+    }
+    
+    // Path complexity (approximate)
+    let pathComplexity = req.path.split('/').length - 1;
+    
+    // Headers and body size
+    const headerCount = Object.keys(req.headers).length;
+    const bodySize = req.body ? JSON.stringify(req.body).length : 0;
+    
+    // Create a 2D vector representation
+    // X component: method and path complexity
+    // Y component: request size (headers + body)
+    return new Vector2D(
+      methodValue * (1 + 0.2 * pathComplexity),
+      0.1 * (headerCount + bodySize)
+    );
+  }
+  
+  // Analyze flow patterns to detect turbulence
+  analyzeFlowPatterns(clientId, flows) {
+    // Ensure we analyze only recent flows
+    const currentTime = Date.now();
+    const recentFlows = flows.filter(flow => 
+      currentTime - flow.timestamp < this.timeWindow
+    );
+    
+    // Calculate Reynolds number
+    const reynolds = this.calculateReynolds(recentFlows);
+    
+    // Calculate vorticity (curl of the vector field)
+    const vorticity = this.calculateVorticity(recentFlows);
+    
+    // Calculate divergence
+    const divergence = this.calculateDivergence(recentFlows);
+    
+    // Determine if the flow is turbulent
+    const isTurbulent = (
+      reynolds > this.reynoldsThreshold ||
+      Math.abs(vorticity) > this.vorticityThreshold ||
+      Math.abs(divergence) > this.divergenceThreshold
+    );
+    
+    // Update alert status
+    if (isTurbulent && !this.alertStatus.has(clientId)) {
+      this.alertStatus.set(clientId, {
+        since: currentTime,
+        level: 'warning'
+      });
+      
+      // Log the turbulence event
+      secureLogger.securityLog({
+        type: 'TURBULENCE_DETECTED',
+        clientId,
+        reynolds,
+        vorticity,
+        divergence,
+        flowCount: recentFlows.length
+      });
+    } else if (isTurbulent && this.alertStatus.has(clientId)) {
+      // Update existing alert
+      const alert = this.alertStatus.get(clientId);
+      
+      // Escalate alert level if turbulence persists
+      if (currentTime - alert.since > 30000 && alert.level === 'warning') {
+        alert.level = 'critical';
+        
+        secureLogger.securityLog({
+          type: 'TURBULENCE_ESCALATED',
+          clientId,
+          reynolds,
+          vorticity,
+          divergence,
+          durationMs: currentTime - alert.since
+        });
+      }
+    } else if (!isTurbulent && this.alertStatus.has(clientId)) {
+      // Remove alert if turbulence has subsided
+      this.alertStatus.delete(clientId);
+    }
+    
+    return {
+      isTurbulent,
+      measures: {
+        reynolds,
+        vorticity,
+        divergence
+      },
+      alertLevel: this.alertStatus.get(clientId)?.level || 'none'
+    };
+  }
+  
+  // Calculate Reynolds number for fluid dynamics
+  calculateReynolds(flows) {
+    if (flows.length < 2) {
+      return 0;
+    }
+    
+    // Calculate average velocity
+    let totalVelocity = 0;
+    for (let i = 1; i < flows.length; i++) {
+      const prev = flows[i-1].vector;
+      const curr = flows[i].vector;
+      const timeDiff = (flows[i].timestamp - flows[i-1].timestamp) / 1000; // in seconds
+      
+      // Calculate velocity as vector difference over time
+      const velocity = Vector2D.subtract(curr, prev).magnitude() / Math.max(0.1, timeDiff);
+      totalVelocity += velocity;
+    }
+    
+    const avgVelocity = totalVelocity / (flows.length - 1);
+    
+    // Characteristic length (path diversity)
+    const pathSet = new Set(flows.map(flow => flow.path));
+    const characteristicLength = pathSet.size;
+    
+    // Kinematic viscosity (constant for our fluid model)
+    const kinematicViscosity = 1.5;
+    
+    // Calculate Reynolds number
+    return (avgVelocity * characteristicLength) / kinematicViscosity;
+  }
+  
+  // Calculate vorticity (curl) of the flow field
+  calculateVorticity(flows) {
+    if (flows.length < 3) {
+      return 0;
+    }
+    
+    // Create a 2x2 grid of vectors (simplified)
+    const grid = [
+      [flows[0].vector, flows[1].vector],
+      [flows[2].vector, flows.length > 3 ? flows[3].vector : flows[0].vector]
+    ];
+    
+    // Calculate partial derivatives
+    const dUdy = (grid[1][0].x - grid[0][0].x + grid[1][1].x - grid[0][1].x) / 2;
+    const dVdx = (grid[0][1].y - grid[0][0].y + grid[1][1].y - grid[1][0].y) / 2;
+    
+    // Vorticity = dV/dx - dU/dy (curl in 2D)
+    return dVdx - dUdy;
+  }
+  
+  // Calculate divergence of the flow field
+  calculateDivergence(flows) {
+    if (flows.length < 3) {
+      return 0;
+    }
+    
+    // Create a 2x2 grid of vectors (simplified)
+    const grid = [
+      [flows[0].vector, flows[1].vector],
+      [flows[2].vector, flows.length > 3 ? flows[3].vector : flows[0].vector]
+    ];
+    
+    // Calculate partial derivatives
+    const dUdx = (grid[0][1].x - grid[0][0].x + grid[1][1].x - grid[1][0].x) / 2;
+    const dVdy = (grid[1][0].y - grid[0][0].y + grid[1][1].y - grid[0][1].y) / 2;
+    
+    // Divergence = dU/dx + dV/dy
+    return dUdx + dVdy;
+  }
+  
+  // Clean up old flow data
+  cleanupOldData() {
+    const cutoffTime = Date.now() - this.timeWindow;
+    
+    // Clean up flow vectors
+    for (const [clientId, flows] of this.flowVectors.entries()) {
+      const filteredFlows = flows.filter(flow => flow.timestamp >= cutoffTime);
+      
+      // Update or remove client data
+      if (filteredFlows.length > 0) {
+        this.flowVectors.set(clientId, filteredFlows);
+      } else {
+        this.flowVectors.delete(clientId);
+      }
+    }
+    
+    // Clean up alerts that haven't been updated
+    for (const [clientId, alert] of this.alertStatus.entries()) {
+      if (alert.since < cutoffTime) {
+        this.alertStatus.delete(clientId);
+      }
+    }
+  }
+}
+
+module.exports = TurbulenceDetector;
