@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미적분 기반 과학 개념 요약</title>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; padding: 30px; background: #f5f5f5; }
+    .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #222; }
+    pre { font-size: 18px; line-height: 1.7; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>미적분 기반 과학 개념 요약</h1>
+    <pre>
+1. Navier-Stokes 방정식:
+   ∂v/∂t + (v·∇)v = -∇p/ρ + ν∇²v + f
+   ≈ lim(h→0) [v(x+h) - v(x)] / h
+
+2. 포아죄유 법칙 (Poiseuille Law):
+   Q ∝ -dP/dx → 압력차 기반 유량 계산
+
+3. 이상 감지용 대칭 극한:
+   lim(x→a) [f(h) + f(h - 2x)] / x
+
+4. 마할라노비스 거리:
+   D² = (x - μ)^T Σ⁻¹ (x - μ)
+   → 벡터 간 거리 미분으로 이상 탐지
+
+5. 멕스웰 속도 분포:
+   f(v) = (m/2πkT)^(3/2) * e^(-mv² / 2kT)
+   → 속도 확률분포의 도함수 관점 활용
+
+6. 쌍곡선 편미분방정식 (Hyperbolic PDE):
+   ∂u/∂t + a∂u/∂x = 0 형태 유지
+    </pre>
+  </div>
+</body>
+</html>

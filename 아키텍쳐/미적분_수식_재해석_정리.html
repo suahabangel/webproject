@@ -1,0 +1,31 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미적분 기반 수식 재해석 요약</title>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; padding: 40px; background: #f8f8f8; }
+    .section { background: #fff; padding: 30px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { color: #2c3e50; }
+    pre { font-size: 17px; white-space: pre-wrap; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>미적분 관점으로 재해석된 시스템 아키텍처 수식 요약</h1>
+<div class='section'><h2>100.png ~ 1111.png</h2><pre>Navier-Stokes: ∂v/∂t + (v·∇)v = -∇p/ρ + ν∇²v + f
+=> lim(h→0) [v(x+h) - v(x)] / h
+속도 변화율, 이상 감지 대칭 극한도 포함
+</pre></div>
+<div class='section'><h2>22.png ~ 44.png</h2><pre>Poiseuille 유량 방정식: Q ∝ -dP/dx
+WSS (τ = μ(du/dy)), 압력 경사 미분
+</pre></div>
+<div class='section'><h2>55.png ~ 666.png</h2><pre>시스템 해밀토니안: H = T + V
+속도 중첩: V = V₁ + V₂, ∂H/∂t 등 도함수 해석
+</pre></div>
+<div class='section'><h2>77.png ~ 99.png</h2><pre>OSI = ∫|τ(t)|dt / ∫τ(t)dt, 회전각도 미분 ω = dθ/dt
+F = mω²r 형태로 원운동 해석
+</pre></div>
+<div class='section'><h2>999.png</h2><pre>압력 및 힘 상호작용 표현으로 ∂F/∂t 또는 ∇·F 구조로 해석 가능
+</pre></div>
+</body></html>
