@@ -1,0 +1,70 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\geometry{a4paper, margin=1in}
+
+\title{A Unified Framework for Biomedical Pathophysiology Analysis Using Calculus-Based Mathematical Models}
+\author{GPTOnline Research Group\\\href{https://gptonline.ai/ko/}{https://gptonline.ai/ko/}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This study presents an integrated methodology for interpreting biomedical pathophysiology using differential and vector calculus. Classical equations such as Navier-Stokes, Poiseuille flow, Maxwell-Boltzmann distribution, Mahalanobis distance, and advection-diffusion models are mapped to clinical disorders, offering a structured approach to disease detection and simulation modeling.
+\end{abstract}
+
+\section{Introduction}
+In modern medicine, quantitative modeling of biological systems is increasingly used for disease prediction and personalized treatment. Fluid dynamics, molecular diffusion, and metabolic variation can be effectively described through mathematical formulations. However, the link between abstract mathematical representations and clinical diagnosis remains limited.
+
+This study aims to bridge that gap by applying core calculus-based equations to specific pathological phenomena. By mapping variables such as velocity ($\vec{v}$), pressure ($p$), and shear stress ($\tau$) to measurable biomedical parameters, we outline a framework that aligns mathematical constructs with disease mechanisms.
+
+\section{Background}
+Traditional models such as the Navier-Stokes equation have long been used in engineering contexts. In biomedical science, these equations are now applied to understand phenomena like blood flow turbulence, respiratory gas kinetics, and tumor progression. Yet their interpretability and clinical utility require structured associations with known disease conditions.
+
+\section{Methodology}
+\subsection{Mathematical Models}
+We selected the following representative equations:
+\begin{itemize}
+    \item \textbf{Navier-Stokes:} $\partial \vec{v}/\partial t + (\vec{v} \cdot \nabla)\vec{v} = -\nabla p/\rho + \nu \nabla^2 \vec{v} + \vec{f}$
+    \item \textbf{Poiseuille Flow:} $Q = \frac{\pi r^4 \Delta P}{8 \mu L}$, $\tau = \mu \frac{\partial u}{\partial y}$
+    \item \textbf{Maxwell-Boltzmann:} $f(v) = \left( \frac{m}{2\pi kT} \right)^{3/2} e^{-\frac{mv^2}{2kT}}$
+    \item \textbf{Mahalanobis Distance:} $D^2 = (\vec{x} - \vec{\mu})^T \Sigma^{-1}(\vec{x} - \vec{\mu})$
+    \item \textbf{Advection-Diffusion:} $\frac{\partial c}{\partial t} + \vec{v} \cdot \nabla c = D \nabla^2 c + R(c,y)$
+\end{itemize}
+
+\subsection{Disease Mapping}
+Each model was associated with a disease based on biomedical phenomena:
+\begin{itemize}
+    \item \textbf{Navier-Stokes:} Deep vein thrombosis, atherosclerosis
+    \item \textbf{Poiseuille + Power-law:} Hypertension, arterial stenosis
+    \item \textbf{Maxwell-Boltzmann:} Asthma, COPD (gas molecule velocity distribution)
+    \item \textbf{Mahalanobis Distance:} ECG/EEG anomaly detection
+    \item \textbf{Advection-Diffusion:} Drug delivery in tumors, sepsis
+\end{itemize}
+
+\section{Results}
+Using the models, we reconstructed simulated disease environments:
+\begin{itemize}
+    \item \textbf{DVT Simulation:} Blood flow stagnation near valve sites was detected using vorticity derived from Navier-Stokes.
+    \item \textbf{Airway Restriction:} The distribution of oxygen velocity in COPD showed skewness from Maxwell-Boltzmann's expectations.
+    \item \textbf{Pathogen Spread:} Diffusion models estimated the real-time concentration of pathogens under sepsis conditions.
+\end{itemize}
+
+\section{Discussion}
+This model-based analysis allows us to quantify clinical conditions that were once evaluated subjectively. Moreover, linking parameters such as $\nabla p$ and $\tau(t)$ to measurable clinical indices offers a translational pathway from theory to bedside. However, further clinical trials and patient-specific calibration are required.
+
+\section{Conclusion}
+We proposed a unified calculus-based framework that enables the direct mapping of mathematical models to biomedical disorders. This approach can serve as the foundation for simulation-based diagnostics and therapeutic planning in precision medicine.
+
+\section*{References}
+\begin{itemize}
+    \item Quarteroni, A., Formaggia, L. (2004). Mathematical modelling and numerical simulation of the cardiovascular system. Handbook of Numerical Analysis.
+    \item Fung, Y. C. (1997). Biomechanics: Circulation. Springer.
+    \item Chui, C. K., et al. (2014). Computational modeling for biomedical systems. World Scientific.
+\end{itemize}
+
+\end{document}
