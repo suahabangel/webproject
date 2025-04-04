@@ -1,6 +1,0 @@
-<Window x:Class="WpfMedicalClient.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="의료 시뮬레이터 클라이언트" Height="600" Width="800">
-    <Frame Name="MainFrame" NavigationUIVisibility="Hidden"/>
-</Window>
