@@ -24,3 +24,37 @@ AI 기반 생물학·화학 수식 학습 및 해설 플랫폼
 git clone https://github.com/yourusername/bio-formula-gpt.git
 cd frontend && npm install && npm run dev
 cd ../backend && npm install && npm run start:dev
+
+사용방법
+
+---
+
+### 🇺🇸 `README.md` – English Version
+
+```md
+# 🧬 Bio-FormulaGPT
+
+AI-powered scientific platform for learning and explaining biology/chemistry formulas.
+
+## 🔍 Key Features
+- ✅ Visualize and explain formulas like CRISPR, DNA alignment, circadian rhythm
+- ✅ GPT-based natural language explanations for chemical kinetics and equations
+- ✅ Auto-generated quizzes based on scientific expressions
+- ✅ AI chatbot for real-time Q&A
+- ✅ Integrated with PubChem and NCBI for compound/gene information
+
+## 🚀 Demo Deployment
+- Frontend (Vercel): [Demo Link](https://your-vercel-link.vercel.app)
+- Backend (Render): [API Link](https://your-api.render.com)
+- GPT Chatbot: [Hugging Face Space](https://huggingface.co/spaces/your-space)
+
+## 🧪 Tech Stack
+- Frontend: Vue 3 / React
+- Backend: NestJS + OpenAI GPT-4
+- APIs: PubChem, NCBI, BioPython
+
+## 📦 Installation
+```bash
+git clone https://github.com/yourusername/bio-formula-gpt.git
+cd frontend && npm install && npm run dev
+cd ../backend && npm install && npm run start:dev
