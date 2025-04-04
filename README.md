@@ -1,12 +1,26 @@
-개인 프로젝트 이긴하지만 조금 쓸쓸한 탓에 몇마디 끄적일까 합니다.
-향정신성 물질인 리단정을 생수로 희석시킨뒤 6시간동안 부패시키고 여과시켜 곰팡이균과 신경독을 걸러냈고
-씨앗이 있는 화분에 옮겨심어 씨앗에 곰팡이균을 감염시킨후 촉진제로 신경독을 사용했습니다.
-그리고 보호층을 만들기 위해 마약류인 담뱃잎으로 겉표면을 감쌋습니다
-결과물은 주기적으로 리드미에 달아놓겠습니다.지식재산권은 숭실대 연구원으로 제직중인 친누나에게 양도 했으며
-영리적으로 사용될시 수수료가 발생할수 있습니다.
-마지막으로 이건 개인적인 의견인데 ai시대에 사람이 투입되는 이유는
-기계가 알아채지 못하는 블랙박스 영역을 바인딩 또는 렌더링하는 기준을
-가장 효율적으로 정하는데 있어 ai보다 몇배는 우위에 서 있기때문이라고 믿고 있습니다.
-요약하자면 바운딩은 주로 미분을 사용하고 렌더링은 주로 적분을 사용하는 것 같습니다.
-그리고 혹시 이 저작물의 지식재산권을 원하신다면 귀사의 주식5%와 귀사와의 종신계약을 서면으로 약속해주시면 좋겠습니다.
-번외로 연봉은 회사내규에 따르겠습니다.
+# 🧬 Bio-FormulaGPT
+
+AI 기반 생물학·화학 수식 학습 및 해설 플랫폼
+
+## 🔍 주요 기능
+- ✅ DNA 정렬, CRISPR, 생체 리듬 수식 시각화 및 해석
+- ✅ 몰농도, 반응속도, 전기화학 공식 자동 계산 및 GPT 해설
+- ✅ 수식 연습문제 자동 생성 (GPT)
+- ✅ 실시간 AI 챗봇을 통한 과학적 질문 응답
+- ✅ PubChem, NCBI 연동으로 화합물/유전자 정보 자동 조회
+
+## 🚀 데모 배포
+- Frontend: [Vercel](https://your-vercel-link.vercel.app)
+- Backend: [Render](https://your-api.render.com)
+- Chatbot: [Hugging Face Space](https://huggingface.co/spaces/your-space)
+
+## 🧪 기술 스택
+- Frontend: Vue 3 / React
+- Backend: NestJS (OpenAI GPT 연동)
+- External API: PubChem, NCBI, BioPython
+
+## 📦 설치 방법
+```bash
+git clone https://github.com/yourusername/bio-formula-gpt.git
+cd frontend && npm install && npm run dev
+cd ../backend && npm install && npm run start:dev
