@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미적분 수식 기반 과학 아키텍처 흐름도</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.7.0/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; padding: 40px; background: #f4f4f4; }
+    .mermaid { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h2>📐 미적분 기반 과학 수식 아키텍처 흐름도</h2>
+  <div class="mermaid">
+    flowchart TD
+      A[기초 미적분: lim(h→0) (f(x+h)-f(x))/h] --> B1[Navier-Stokes]
+      A --> B2[Poiseuille Law]
+      A --> B3[System Hamiltonian (H = T+V)]
+      A --> B4[Mahalanobis 거리]
+      A --> B5[Maxwell 속도분포]
+      A --> B6[Hyperbolic PDE]
+      A --> B7[OSI 진동 전단지수]
+
+      B1 --> C1[유체 시뮬레이션 설계]
+      B2 --> C2[압력-유량 시스템 모델링]
+      B3 --> C3[에너지 기반 시뮬레이션]
+      B4 --> C4[이상 탐지 알고리즘]
+      B5 --> C5[통계적 속도 분석]
+      B6 --> C6[파동/진동 시뮬레이션]
+      B7 --> C7[혈류 예측, 진동 분석]
+
+      C1 & C2 & C3 & C4 & C5 & C6 & C7 --> D[의료 응용, 보안 분석, AI 모델링 등 다양한 적용]
+  </div>
+</body>
+</html>
