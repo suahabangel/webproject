@@ -1,0 +1,33 @@
+
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\section*{미적분 공식 하드코딩 변환 예시}
+
+\textbf{원래 수식:}
+\[
+\lim_{h \to -h} \frac{f(x - h) + f(x + h)}{h}
+\]
+
+\textbf{전개:}
+\[
+\frac{\pi}{h} + \frac{-\pi}{h} = \frac{\pi - \pi}{h} = 0
+\]
+
+\textbf{두 번째 미적분 공식에서 변형된 형태:}
+\[
+\lim_{x \to 2} \frac{f(h) + f(h(2 - x))}{x}
+\]
+
+\textbf{하드코딩 변환:}
+\[
+\lim_{x \to 2} \frac{f\left( \frac{h + h2}{2} \right) + f\left( h(2 - x) \right)}{x}
+\]
+
+또는 보다 일반적인 형태:
+\[
+\lim_{x \to a} \frac{f(h) + f(h(a - x))}{x}
+\]
+
+\end{document}
